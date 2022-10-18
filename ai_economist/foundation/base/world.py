@@ -379,11 +379,13 @@ class World:
 
         mobile_class = agent_registry.get("BasicMobileAgent")
         planner_class = agent_registry.get("BasicPlanner")
+        federal_reserve_class = agent_registry.get("BasicFederalReserve")
         self._agents = [
             mobile_class(i, multi_action_mode=self.multi_action_mode_agents)
             for i in range(self.n_agents)
         ]
         self._planner = planner_class(multi_action_mode=self.multi_action_mode_planner)
+        self._federal_reserve = federal_reserve_class(multi_action_mode=self.multi_action_mode_planner)
 
         self.timestep = 0
 
@@ -403,6 +405,12 @@ class World:
         """Return the planner agent object."""
         return self._planner
 
+
+    @property
+    def federal_reserve(self):
+        """Return the federal_reserve agent object."""
+        return self._federal_reserve
+    
     @property
     def loc_map(self):
         """Return a map indicating the agent index occupying each location.

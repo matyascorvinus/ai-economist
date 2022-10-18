@@ -104,7 +104,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         start_date="2020-03-22",
         pop_between_age_18_65=0.6,
         infection_too_sick_to_work_rate=0.1,
-        risk_free_interest_rate=0.03,
+        risk_free_interest_rate=0.0,
+        us_treasury_yields_10_years=0.02,
+        fed_interest_rate=0.025,
         economic_reward_crra_eta=2,
         health_priority_scaling_agents=1,
         health_priority_scaling_planner=1,
@@ -121,7 +123,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.use_real_world_data = use_real_world_data
         # Flag to use real-world policies (actions) or the supplied actions instead
         self.use_real_world_policies = use_real_world_policies
-
+        
         # If we use real-world data, we also want to use the real-world policies
         if self.use_real_world_data:
             print(
@@ -220,6 +222,17 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.world.start_date = self.start_date
         self.world.n_stringency_levels = self.num_stringency_levels
         self.world.use_real_world_policies = self.use_real_world_policies
+        
+        self.us_treasury_yields_10_years = us_treasury_yields_10_years
+        self.fed_interest_rate = fed_interest_rate
+        
+        self.world.money_supply = self.money_supply  
+        self.world.federal_reserve_balance_sheet = self.federal_reserve_balance_sheet  
+        self.world.us_debt = self.us_debt  
+        self.world.us_cpi = self.us_cpi  
+        self.world.treasury_yield = self.us_treasury_yields_10_years
+        self.world.interest_rate = self.fed_interest_rate
+        
         if self.use_real_world_policies:
             # Agent open/close stringency levels
             self.world.real_world_stringency_policy = self._real_world_data["policy"][
@@ -229,6 +242,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             self.world.real_world_subsidy = self._real_world_data["subsidy"][
                 self.start_date_index :
             ]
+            # # Federal Reserve QE levels
+            # self.world.real_world_QE = self._real_world_data["QE"][
+            #     self.start_date_index :
+            # ]
 
         # Policy --> Unemployment
         #   For accurately modeling the state-wise unemployment, we convolve
@@ -244,6 +261,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             np.flip(np.arange(self.filter_len), (0,))[None, None],
             (1, self.num_filters, 1),
         ).astype(self.np_float_dtype)
+        
         self.unemp_conv_filters = np.exp(-self.f_ts / self.conv_lambdas[None, :, None])
         # Each state weights these filters differently.
         self.repeated_conv_weights = np.repeat(
@@ -262,6 +280,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Economy-related
         # Interest rate for borrowing money from the federal reserve
         self.risk_free_interest_rate = self.np_float_dtype(risk_free_interest_rate)
+        self.us_treasury_yields_10_years = self.np_float_dtype(us_treasury_yields_10_years)
+        self.fed_interest_rate = self.np_float_dtype(fed_interest_rate)
 
         # Compute each worker's daily productivity when at work (to match 2019 GDP)
         # We assume the open/close stringency policy level was always at it's lowest
@@ -302,7 +322,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             population_between_age_18_65=self.pop_between_age_18_65,
         )
         self.maximum_productivity_t = max_productivity_t
-
+        
+        # Federal Reserve QE Operation
+        max_QE_2019_per_person = 600
+        self.maximum_QE_2019_per_person = max_QE_2019_per_person
+        self.maximum_FED_Balance_Sheet_2020 = 4.2 
+        
         # Economic reward non-linearity
         self.economic_reward_crra_eta = self.np_float_dtype(economic_reward_crra_eta)
         assert 0.0 <= self.economic_reward_crra_eta < 20.0
@@ -375,7 +400,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.world.cuda_function_manager = self.cuda_function_manager
 
     name = "CovidAndEconomySimulation"
-    agent_subclasses = ["BasicMobileAgent", "BasicPlanner"]
+    agent_subclasses = ["BasicMobileAgent", "BasicPlanner", "BasicFederalReserve"]
 
     required_entities = []
 
@@ -443,6 +468,44 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             data=self.world.global_state["Postsubsidy Productivity"],
             save_copy_and_apply_at_reset=True,
         )
+        
+        # Federal Reserve-related
+        data_dict.add_data(
+            name="QE",
+            data=self.world.global_state["QE"], # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="MoneySupply",
+            data=self.world.global_state["Money Supply"], # Money Supply
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="InterestRate",
+            data=self.world.global_state["Interest Rate"],  # Interest Rate
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="TreasuryYield",
+            data=self.world.global_state["Treasury Yield"],  # Treasury Yield
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="CPI",
+            data=self.world.global_state["CPI"], # Consumer Price Index
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="FEDBalanceSheet",
+            data=self.world.global_state["FED Balance Sheet"], # FED Balance Sheet
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USDebt",
+            data=self.world.global_state["US Debt"], # US Debt
+            save_copy_and_apply_at_reset=True,
+        )
+        
         data_dict.add_data(
             name="productivity",
             data=np.zeros_like(
@@ -674,6 +737,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data(
                     "real_world_stringency_policy_history"
                 ),
+                
+                # Federal Reserve-related
+                self.cuda_data_manager.device_data("QE"), 
+                self.cuda_data_manager.device_data("MoneySupply"), 
+                self.cuda_data_manager.device_data("InterestRate"), 
+                self.cuda_data_manager.device_data("TreasuryYield" ), 
+                self.cuda_data_manager.device_data("CPI"), 
+                self.cuda_data_manager.device_data("FEDBalanceSheet"), 
+                self.cuda_data_manager.device_data("USDebt"), 
+                                
                 self.cuda_data_manager.device_data("beta_delay"),
                 self.cuda_data_manager.device_data("beta_slopes"),
                 self.cuda_data_manager.device_data("beta_intercepts"),
@@ -841,10 +914,22 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             # Add federal government subsidy to productivity
             daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
             postsubsidy_productivity_t = productivity_t + daily_statewise_subsidy_t
-            self.world.global_state["Postsubsidy Productivity"][
-                curr_t
-            ] = postsubsidy_productivity_t
+            
 
+            # Federal Reserve-related
+            daily_QE = self.world.global_state["QE"][curr_t]
+            daily_MoneySupply = self.world.global_state["Money Supply"][curr_t]
+            daily_InterestRate = self.world.global_state["Interest Rate"][curr_t]
+            daily_TreasuryYield = self.world.global_state["Treasury Yield"][curr_t]
+            daily_CPI = self.world.global_state["CPI"][curr_t]
+            daily_FEDBalanceSheet = self.world.global_state["FED Balance Sheet"][curr_t]
+            daily_USDebt = self.world.global_state["US Debt"][curr_t]
+             
+            
+            postsubsidy_productivity_t = productivity_t + daily_statewise_subsidy_t 
+            self.world.global_state["Postsubsidy Productivity"][curr_t] = postsubsidy_productivity_t
+            
+        
             # Update agent state
             # ------------------
             current_date_string = datetime.strftime(
@@ -908,12 +993,37 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             self.world.planner.state["Total Unemployed"] = np.sum(
                 num_unemployed_t
             ).astype(self.np_int_dtype)
+            
             self.world.planner.state["New Subsidy Provided"] = np.sum(
                 daily_statewise_subsidy_t
             )
             self.world.planner.state["Postsubsidy Productivity"] = np.sum(
                 postsubsidy_productivity_t
             )
+            
+            # Federal Reserve-related
+            self.world.planner.state["QE"] = np.sum(
+                daily_QE
+            )
+            self.world.planner.state["Money Supply"] = np.sum(
+                daily_MoneySupply
+            )
+            self.world.planner.state["Interest Rate"] = np.sum(
+                daily_InterestRate
+            )
+            self.world.planner.state["Treasury Yield"] = np.sum(
+                daily_TreasuryYield
+            )
+            self.world.planner.state["CPI"] = np.sum(
+                daily_CPI
+            )
+            self.world.planner.state["FED Balance Sheet"] = np.sum(
+                daily_FEDBalanceSheet
+            )
+            self.world.planner.state["US Debt"] = np.sum(
+                daily_USDebt
+            )  
+            
             self.world.planner.state["Date"] = current_date_string
 
     def generate_observations(self):
@@ -921,6 +1031,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         - Process agent-specific and planner-specific data into an observation.
         - Observations contain only the relevant features for that actor.
         :return: a dictionary of observations for each agent and planner
+        
+        Bloomberg’s Sovereign Debt Vulnerability Ranking is a composite measure of a country’s default risk. It’s based on four underlying metrics:
+
+            Government bond yields (the weighted-average yield of the country’s dollar bonds)
+            5-year credit default swap (CDS) spread
+            Interest expense as a percentage of GDP
+            Government debt as a percentage of GDP
         """
         redux_agent_global_state = None
         for feature in [
@@ -950,9 +1067,26 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         postsubsidy_productivity_t = self.world.global_state[
             "Postsubsidy Productivity"
         ][self.world.timestep]
+        
         normalized_postsubsidy_productivity_t = (
             postsubsidy_productivity_t / self.maximum_productivity_t
         )
+        
+        # Federal Reserve
+        QE_t = self.world.global_state[
+            "QE"
+        ][self.world.timestep]
+        
+        normalized_QE_t = (
+            QE_t / self.maximum_QE_2019_per_person
+        )
+        
+        current_FED_balance_sheet = self.world.global_state["FED Balance Sheet"][self.world.timestep]
+        
+        normalized_FED_balance_sheet_t = (
+            current_FED_balance_sheet / self.maximum_FED_Balance_Sheet_2020
+        )
+        
 
         # Let agents know about the policy about to affect SIR infection-rate beta
         t_beta = self.world.timestep - self.beta_delay + 1
@@ -972,6 +1106,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # To condition policy on agent id
         agent_index = np.eye(self.n_agents, dtype=self.np_int_dtype)
 
+        
         # Observation dict - Agents
         # -------------------------
         obs_dict = dict()
@@ -990,6 +1125,17 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "lagged_stringency_level": normalized_lagged_stringency_level,
         }
 
+
+        # Observation dict - Federal Reserve
+        # --------------------------
+        obs_dict[self.world.federal_reserve.idx] = {
+            "agent_state": normalized_redux_agent_state,
+            "agent_postsubsidy_productivity": normalized_postsubsidy_productivity_t,
+            "lagged_stringency_level": normalized_lagged_stringency_level,
+            "normalized_QE_t": normalized_QE_t,
+            "normalized_FED_balance_sheet_t": normalized_FED_balance_sheet_t,
+        }
+
         return obs_dict
 
     def compute_reward(self):
@@ -1004,6 +1150,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("num_days_in_an_year"),
                 self.cuda_data_manager.device_data("value_of_life"),
                 self.cuda_data_manager.device_data("risk_free_interest_rate"),
+                self.cuda_data_manager.device_data("us_treasury_yields_10_years"),
+                self.cuda_data_manager.device_data("fed_interest_rate"),
                 self.cuda_data_manager.device_data("economic_reward_crra_eta"),
                 self.cuda_data_manager.device_data("min_marginal_agent_health_index"),
                 self.cuda_data_manager.device_data("max_marginal_agent_health_index"),
@@ -1069,6 +1217,17 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 health_index_weightage * health_index
                 + economic_index_weightage * economic_index
             ) / (health_index_weightage + economic_index_weightage)
+        def get_weighted_average_federal_reserve(
+            money_supply,
+            balance_sheet,
+            interest_rate,
+            us_debt 
+        ):
+            return - (
+                (money_supply / self.trillion_dollar / self.money_supply) * 0.1
+                + (balance_sheet / self.trillion_dollar / self.federal_reserve_balance_sheet) * 0.3 
+                + interest_rate * 0.1 + us_debt/self.us_debt * 0.3
+            )  
 
         # Changes this last timestep:
         marginal_deaths = (
@@ -1133,9 +1292,18 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             * self.value_of_life
             / self.planner_health_norm
         )
-
+        
+        fraction_betwene_QE_and_subsidy = (np.sum(subsidy_t) / 
+            self.world.global_state["QE"][self.world.timestep]) 
+        
+        final_interest_rate = (self.risk_free_interest_rate + self.world.global_state["Interest Rate"][self.world.timestep]) * fraction_betwene_QE_and_subsidy
+        + self.us_treasury_yields_10_years * ( 1 - fraction_betwene_QE_and_subsidy )
+        
         # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
-        cost_of_subsidy_t = (1 + self.risk_free_interest_rate) * np.sum(subsidy_t)
+        cost_of_subsidy_t = (1 + final_interest_rate) * np.sum(subsidy_t)
+        
+        probability_of_default = self.world.global_state["Interest Rate"]
+        [self.world.timestep]
         # Use a "crra" nonlinearity on the planner economic reward
         marginal_planner_economic_index = crra_nonlinearity(
             (np.sum(postsubsidy_productivity_t) - cost_of_subsidy_t)
@@ -1168,7 +1336,17 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             self.weightage_on_marginal_planner_economic_index,
             marginal_planner_economic_index,
         )
+        # Federal Reserve Reward
+        # --------------
+        federal_reserve_rewards = get_weighted_average_federal_reserve(
+            self.world.global_state["Money Supply"][self.world.timestep],
+            self.world.global_state["FED Balance Sheet"][self.world.timestep],
+            final_interest_rate,
+            self.world.global_state["US Debt"][self.world.timestep],
+        )
+        
         rew[self.world.planner.idx] = planner_rewards / self.reward_normalization_factor
+        rew[self.world.federal_reserve.idx] = federal_reserve_rewards / self.reward_normalization_factor
 
         return rew
 
@@ -1228,7 +1406,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.set_global_state("Subsidy Level", dtype=self.np_float_dtype)
         self.set_global_state("Subsidy", dtype=self.np_float_dtype)
         self.set_global_state("Postsubsidy Productivity", dtype=self.np_float_dtype)
-
+         
+        self.set_global_state("QE Level", dtype=self.np_float_dtype)
+        self.set_global_state("QE", dtype=self.np_float_dtype) 
+        self.set_global_state("US Debt", self.us_debt, dtype=self.np_float_dtype)
+        self.set_global_state("CPI", self.us_cpi, dtype=self.np_float_dtype) 
+        self.set_global_state("Treasury Yield", self.us_treasury_yields_10_years, dtype=self.np_float_dtype)
+        self.set_global_state("Interest Rate", self.fed_interest_rate, dtype=self.np_float_dtype)
+        
         # Set initial agent states
         # ------------------------
         current_date_string = datetime.strftime(
@@ -1307,7 +1492,15 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "Subsidy Level",
             "Subsidy",
             "Postsubsidy Productivity",
+            "QE",
+            "Money Supply",
+            "CPI",
+            "FED Balance Sheet",
+            "US Debt"
         ]
+        
+         
+        
         # If no values are passed, set everything to zeros.
         if key not in self.world.global_state:
             self.world.global_state[key] = np.zeros(
@@ -1533,12 +1726,20 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.us_state_population = self.np_int_dtype(
             model_constants_dict["US_STATE_POPULATION"]
         )
+        self.money_supply = self.np_float_dtype(model_constants_dict["M1_MONEY_SUPPLY_IN_TRILLION"])
+        self.federal_reserve_balance_sheet = self.np_float_dtype(model_constants_dict["FEDERAL_RESERVE_BALANCE_SHEET_IN_TRILLION"])
+        self.us_debt = self.np_float_dtype(model_constants_dict["US_DEBT_IN_TRILLION"])
+        self.us_cpi = self.np_float_dtype(model_constants_dict["US_CPI"])
+        
         self.us_population = self.np_int_dtype(model_constants_dict["US_POPULATION"])
         self.num_stringency_levels = model_constants_dict["NUM_STRINGENCY_LEVELS"]
         self.death_rate = self.np_float_dtype(model_constants_dict["SIR_MORTALITY"])
         self.gamma = self.np_float_dtype(model_constants_dict["SIR_GAMMA"])
         self.gdp_per_capita = self.np_float_dtype(
             model_constants_dict["GDP_PER_CAPITA"]
+        )
+        self.trillion_dollar = self.np_float_dtype(
+            model_constants_dict["TRILLION"]
         )
 
     def load_fitted_params(self, path_to_fitted_params):

@@ -441,6 +441,7 @@ class FederalGovernmentSubsidy(BaseComponent):
                 self.world.timestep
             ] = daily_statewise_subsidy
             self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
+            self.world.global_state["US Debt"] += np.sum(daily_statewise_subsidy)
 
     def generate_observations(self):
         # Allow the agents/planner to know when the next subsidy might come.

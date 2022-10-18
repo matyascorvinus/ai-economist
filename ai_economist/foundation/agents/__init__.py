@@ -6,7 +6,7 @@
 
 from ai_economist.foundation.base.base_agent import agent_registry
 
-from . import mobiles, planners
+from . import mobiles, planners, federal_reserve
 
 # Import files that add Agent class(es) to agent_registry
 # -------------------------------------------------------

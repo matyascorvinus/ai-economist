@@ -344,6 +344,8 @@ class BaseEnvironment(ABC):
             agent.register_components(self._components)
         self.world.planner.register_inventory(self.resources)
         self.world.planner.register_components(self._components)
+        self.world.federal_reserve.register_inventory(self.resources)
+        self.world.federal_reserve.register_components(self._components)
 
         self._agent_lookup = {str(agent.idx): agent for agent in self.all_agents}
 
@@ -409,8 +411,8 @@ class BaseEnvironment(ABC):
 
     @property
     def all_agents(self):
-        """List of mobile agents and the planner agent."""
-        return self.world.agents + [self.world.planner]
+        """List of mobile agents, the planner agent and the Federal Reserve."""
+        return self.world.agents + [self.world.planner] + [self.world.federal_reserve]
 
     @property
     def previous_episode_metrics(self):
@@ -696,6 +698,9 @@ class BaseEnvironment(ABC):
                 obs[self.world.planner.idx][k] = (
                     v["flat"] if flatten_observations else v
                 )
+                obs[self.world.federal_reserve.idx][k] = (
+                    v["flat"] if flatten_observations else v
+                )
 
         # Get each agent's action masks and incorporate them into the observations
         for aidx, amask in self._generate_masks(flatten_masks=flatten_masks).items():
@@ -729,6 +734,9 @@ class BaseEnvironment(ABC):
                         multi_action_mode = self.multi_action_mode_agents
                         no_op_mask = np.ones((1, self.n_agents))
                     elif agent_id == "p":
+                        multi_action_mode = self.multi_action_mode_planner
+                        no_op_mask = [1]
+                    elif agent_id == "f":
                         multi_action_mode = self.multi_action_mode_planner
                         no_op_mask = [1]
                     mask_dict = masks[agent_id]
