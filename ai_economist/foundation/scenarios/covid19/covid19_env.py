@@ -1481,23 +1481,23 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Use floats by default for the SIR dynamics
         if dtype is None:
             dtype = self.np_float_dtype
-        assert key in [
-            "Susceptible",
-            "Infected",
-            "Recovered",
-            "Deaths",
-            "Unemployed",
-            "Vaccinated",
-            "Stringency Level",
-            "Subsidy Level",
-            "Subsidy",
-            "Postsubsidy Productivity",
-            "QE",
-            "Money Supply",
-            "CPI",
-            "FED Balance Sheet",
-            "US Debt"
-        ]
+        # assert key in [
+        #     "Susceptible",
+        #     "Infected",
+        #     "Recovered",
+        #     "Deaths",
+        #     "Unemployed",
+        #     "Vaccinated",
+        #     "Stringency Level",
+        #     "Subsidy Level",
+        #     "Subsidy",
+        #     "Postsubsidy Productivity",
+        #     "QE",
+        #     "Money Supply",
+        #     "CPI",
+        #     "FED Balance Sheet",
+        #     "US Debt"
+        # ]
         
          
         
