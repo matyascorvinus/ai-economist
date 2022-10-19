@@ -1411,6 +1411,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.set_global_state("QE", dtype=self.np_float_dtype) 
         self.set_global_state("US Debt", self.us_debt, dtype=self.np_float_dtype)
         self.set_global_state("CPI", self.us_cpi, dtype=self.np_float_dtype) 
+        self.set_global_state("FED Balance Sheet", self.federal_reserve_balance_sheet, dtype=self.np_float_dtype)
         self.set_global_state("Treasury Yield", self.us_treasury_yields_10_years, dtype=self.np_float_dtype)
         self.set_global_state("Interest Rate", self.fed_interest_rate, dtype=self.np_float_dtype)
         
