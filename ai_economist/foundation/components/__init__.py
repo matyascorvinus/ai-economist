@@ -11,6 +11,7 @@ from . import (
     continuous_double_auction,
     covid19_components,
     move,
+    federal_reserve_components,
     redistribution,
     simple_labor,
 )
