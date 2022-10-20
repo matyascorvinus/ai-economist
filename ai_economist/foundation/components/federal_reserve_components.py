@@ -79,12 +79,12 @@ except ValueError:
 #     def generate_masks(self, completions=0):
 #         masks = {}
 #         if self.world.use_real_world_policies:
-#             masks[self.world.federalreserve.idx] = self.default_federal_reserve_action_mask
+#             masks[self.world.federal_reserve.idx] = self.default_federal_reserve_action_mask
 #         else:
 #             if self.world.timestep % self.QE_interval == 0:
-#                 masks[self.world.federalreserve.idx] = self.default_federal_reserve_action_mask
+#                 masks[self.world.federal_reserve.idx] = self.default_federal_reserve_action_mask
 #             else:
-#                 masks[self.world.federalreserve.idx] = self.no_op_federal_reserve_action_mask
+#                 masks[self.world.federal_reserve.idx] = self.no_op_federal_reserve_action_mask
 #         return masks
 
 #     def get_data_dictionary(self):
@@ -170,12 +170,12 @@ except ValueError:
 #                 # Update the QE level only every self.QE_interval, since the
 #                 # other actions are masked out.
 #                 if (self.world.timestep - 1) % self.QE_interval == 0:
-#                     QE_level = self.world.federalreserve.get_component_action(self.name)
+#                     QE_level = self.world.federal_reserve.get_component_action(self.name)
 #                 else:
-#                     QE_level = self.world.federalreserve.state["Current QE Level"]
+#                     QE_level = self.world.federal_reserve.state["Current QE Level"]
 
 #             assert 0 <= QE_level <= self.num_QE_levels
-#             self.world.federalreserve.state["Current QE Level"] = np.array(
+#             self.world.federal_reserve.state["Current QE Level"] = np.array(
 #                 QE_level
 #             ).astype(self.np_int_dtype)
 
@@ -188,7 +188,7 @@ except ValueError:
 #             self.world.global_state["QE"][
 #                 self.world.timestep
 #             ] = daily_statewise_QE
-#             self.world.federalreserve.state["Total QE"] += np.sum(daily_statewise_QE)
+#             self.world.federal_reserve.state["Total QE"] += np.sum(daily_statewise_QE)
 
 #     def generate_observations(self):
 #         # Allow the agents/federalreserve to know when the next QE might come.
@@ -198,7 +198,7 @@ except ValueError:
 #         t_until_next_QE = self.QE_interval - t_since_last_QE
 #         t_vec = t_until_next_QE * np.ones(self.n_agents)
 
-#         current_QE_level = self.world.federalreserve.state["Current QE Level"]
+#         current_QE_level = self.world.federal_reserve.state["Current QE Level"]
 #         sl_vec = current_QE_level * np.ones(self.n_agents)
 
 #         # Normalized observations
@@ -208,7 +208,7 @@ except ValueError:
 #             "current_QE_level": sl_vec / self.num_QE_levels,
 #         }
         
-#         obs_dict[self.world.federalreserve.idx] = {
+#         obs_dict[self.world.federal_reserve.idx] = {
 #             "t_until_next_QE": t_until_next_QE / self.QE_interval,
 #             "current_QE_level": current_QE_level / self.num_QE_levels,
 #         } 
@@ -287,12 +287,12 @@ class FederalQuantitativeEasing(BaseComponent):
     def generate_masks(self, completions=0):
         masks = {}
         if self.world.use_real_world_policies:
-            masks[self.world.federalreserve.idx] = self.default_federal_reserve_action_mask
+            masks[self.world.federal_reserve.idx] = self.default_federal_reserve_action_mask
         else:
             if self.world.timestep % self.QE_interval == 0:
-                masks[self.world.federalreserve.idx] = self.default_federal_reserve_action_mask
+                masks[self.world.federal_reserve.idx] = self.default_federal_reserve_action_mask
             else:
-                masks[self.world.federalreserve.idx] = self.no_op_federal_reserve_action_mask
+                masks[self.world.federal_reserve.idx] = self.no_op_federal_reserve_action_mask
         return masks
 
     def get_data_dictionary(self):
@@ -389,12 +389,12 @@ class FederalQuantitativeEasing(BaseComponent):
                 # Update the QE level only every self.QE_interval, since the
                 # other actions are masked out.
                 if (self.world.timestep - 1) % self.QE_interval == 0:
-                    QE_level = self.world.federalreserve.get_component_action(self.name)
+                    QE_level = self.world.federal_reserve.get_component_action(self.name)
                 else:
-                    QE_level = self.world.federalreserve.state["Current QE Level"]
+                    QE_level = self.world.federal_reserve.state["Current QE Level"]
 
             assert 0 <= QE_level <= self.num_QE_levels
-            self.world.federalreserve.state["Current QE Level"] = np.array(
+            self.world.federal_reserve.state["Current QE Level"] = np.array(
                 QE_level
             ).astype(self.np_int_dtype)
             
@@ -413,10 +413,10 @@ class FederalQuantitativeEasing(BaseComponent):
             self.world.global_state["QE"][
                 self.world.timestep
             ] = daily_statewise_QE
-            self.world.federalreserve.state["Money Supply"] += np.sum(daily_statewise_QE)
+            self.world.federal_reserve.state["Money Supply"] += np.sum(daily_statewise_QE)
             self.world.global_state["Money Supply"] += np.sum(daily_statewise_QE)
             
-            self.world.federalreserve.state["FED Balance Sheet"] += np.sum(daily_statewise_QE)
+            self.world.federal_reserve.state["FED Balance Sheet"] += np.sum(daily_statewise_QE)
             self.world.global_state["FED Balance Sheet"] += np.sum(daily_statewise_QE)
             
 
@@ -428,7 +428,7 @@ class FederalQuantitativeEasing(BaseComponent):
         t_until_next_QE = self.QE_interval - t_since_last_QE
         t_vec = t_until_next_QE * np.ones(self.n_agents)
 
-        current_QE_level = self.world.federalreserve.state["Current QE Level"]
+        current_QE_level = self.world.federal_reserve.state["Current QE Level"]
         sl_vec = current_QE_level * np.ones(self.n_agents)
 
         # Normalized observations
@@ -438,7 +438,7 @@ class FederalQuantitativeEasing(BaseComponent):
             "current_QE_level": sl_vec / self.num_QE_levels,
         }
         
-        obs_dict[self.world.federalreserve.idx] = {
+        obs_dict[self.world.federal_reserve.idx] = {
             "t_until_next_QE": t_until_next_QE / self.QE_interval,
             "current_QE_level": current_QE_level / self.num_QE_levels,
         } 
