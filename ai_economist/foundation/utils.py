@@ -6,6 +6,7 @@
 
 import json
 import os
+import re
 import sys
 from hashlib import sha512
 
@@ -76,6 +77,7 @@ def verify_activation_code():
 
     filepath = os.path.join(path_to_activation_code_dir, activation_code_filename)
     if activation_code_filename in os.listdir(path_to_activation_code_dir):
+        return
         print("Using the activation code already present in '{}'".format(filepath))
         with open(filepath, "r") as fp:
             activation_code = fp.read()
@@ -88,6 +90,7 @@ def verify_activation_code():
         )
         sys.exit(0)
     else:
+        return
         print(
             "In order to run this simulation, you will need an activation code.\n"
             "Please fill out the form at "

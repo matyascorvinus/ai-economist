@@ -1,0 +1,3 @@
+Requirement already satisfied: gym in /home/supremusdominus/anaconda3/envs/ML/lib/python3.10/site-packages (0.21.0)
+Requirement already satisfied: cloudpickle>=1.2.0 in /home/supremusdominus/anaconda3/envs/ML/lib/python3.10/site-packages (from gym) (2.2.0)
+Requirement already satisfied: numpy>=1.18.0 in /home/supremusdominus/anaconda3/envs/ML/lib/python3.10/site-packages (from gym) (1.23.4)

@@ -267,7 +267,7 @@ class FederalGovernmentSubsidy(BaseComponent):
         *base_component_args,
         subsidy_interval=90,
         num_subsidy_levels=20,
-        max_annual_subsidy_per_person=20000,
+        max_annual_subsidy_per_person=40000,
         **base_component_kwargs,
     ):
         self.subsidy_interval = int(subsidy_interval)
