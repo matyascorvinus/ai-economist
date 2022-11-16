@@ -476,6 +476,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
+            name="MaxQE",
+            data=(self.maximum_QE_2019_per_person * self.world.us_state_population / 365), # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="MoneySupply",
+            data=self.money_supply, # Money Supply 2020
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
             name="MoneySupply",
             data=self.world.global_state["Money Supply"], # Money Supply
             save_copy_and_apply_at_reset=True,
@@ -501,8 +511,18 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
+            name="MaxFEDBalanceSheet",
+            data=(self.maximum_FED_Balance_Sheet_2020 * self.trillion_dollar / 365), # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
             name="USDebt",
             data=self.world.global_state["US Debt"], # US Debt
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="MaxUSDebt",
+            data=self.us_debt, # US Debt 2020
             save_copy_and_apply_at_reset=True,
         )
         
@@ -739,12 +759,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 ),
                 
                 # Federal Reserve-related
-                self.cuda_data_manager.device_data("QE"), 
+                self.cuda_data_manager.device_data("QE"),  
+                self.cuda_data_manager.device_data("MaxQE"), 
                 self.cuda_data_manager.device_data("MoneySupply"), 
                 self.cuda_data_manager.device_data("InterestRate"), 
                 self.cuda_data_manager.device_data("TreasuryYield" ), 
                 self.cuda_data_manager.device_data("CPI"), 
                 self.cuda_data_manager.device_data("FEDBalanceSheet"), 
+                self.cuda_data_manager.device_data("MaxFEDBalanceSheet"), 
                 self.cuda_data_manager.device_data("USDebt"), 
                                 
                 self.cuda_data_manager.device_data("beta_delay"),
@@ -789,6 +811,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data(
                     f"{_OBSERVATIONS}_p_world-lagged_stringency_level"
                 ),
+                self.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_f_world-agent_QE"
+                ),
+                self.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_f_world-agent_FED_Balance_Sheet"
+                ),
+                
                 self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_p_time"),
                 self.cuda_data_manager.device_data("_timestep_"),
                 self.cuda_data_manager.meta_info("n_agents"),
@@ -1002,29 +1031,29 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             )
             
             # Federal Reserve-related
-            self.world.planner.state["QE"] = np.sum(
+            self.world.federal_reserve.state["QE"] = np.sum(
                 daily_QE
             )
-            self.world.planner.state["Money Supply"] = np.sum(
+            self.world.federal_reserve.state["Money Supply"] = np.sum(
                 daily_MoneySupply
             )
-            self.world.planner.state["Interest Rate"] = np.sum(
+            self.world.federal_reserve.state["Interest Rate"] = np.sum(
                 daily_InterestRate
             )
-            self.world.planner.state["Treasury Yield"] = np.sum(
+            self.world.federal_reserve.state["Treasury Yield"] = np.sum(
                 daily_TreasuryYield
             )
-            self.world.planner.state["CPI"] = np.sum(
+            self.world.federal_reserve.state["CPI"] = np.sum(
                 daily_CPI
             )
-            self.world.planner.state["FED Balance Sheet"] = np.sum(
+            self.world.federal_reserve.state["FED Balance Sheet"] = np.sum(
                 daily_FEDBalanceSheet
             )
-            self.world.planner.state["US Debt"] = np.sum(
+            self.world.federal_reserve.state["US Debt"] = np.sum(
                 daily_USDebt
             )  
             
-            self.world.planner.state["Date"] = current_date_string
+            self.world.federal_reserve.state["Date"] = current_date_string
 
     def generate_observations(self):
         """
@@ -1078,13 +1107,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         ][self.world.timestep]
         
         normalized_QE_t = (
-            QE_t / self.maximum_QE_2019_per_person
+            QE_t / (self.maximum_QE_2019_per_person * self.world.us_state_population / 365)
         )
         
         current_FED_balance_sheet = self.world.global_state["FED Balance Sheet"][self.world.timestep]
         
         normalized_FED_balance_sheet_t = (
-            current_FED_balance_sheet / self.maximum_FED_Balance_Sheet_2020
+            current_FED_balance_sheet / (self.maximum_FED_Balance_Sheet_2020 * self.trillion_dollar / 365)
         )
         
 
@@ -1147,6 +1176,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             self.cuda_compute_reward(
                 self.cuda_data_manager.device_data(f"{_REWARDS}_a"),
                 self.cuda_data_manager.device_data(f"{_REWARDS}_p"),
+                self.cuda_data_manager.device_data(f"{_REWARDS}_f"),
                 self.cuda_data_manager.device_data("num_days_in_an_year"),
                 self.cuda_data_manager.device_data("value_of_life"),
                 self.cuda_data_manager.device_data("risk_free_interest_rate"),
@@ -1188,11 +1218,24 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("_timestep_"),
                 self.cuda_data_manager.meta_info("n_agents"),
                 self.cuda_data_manager.meta_info("episode_length"),
+                
+                self.cuda_data_manager.device_data("QE"),  
+                self.cuda_data_manager.device_data("MaxQE"), 
+                self.cuda_data_manager.device_data("MoneySupply"), 
+                self.cuda_data_manager.device_data("MaxMoneySupply"), 
+                self.cuda_data_manager.device_data("InterestRate"), 
+                self.cuda_data_manager.device_data("TreasuryYield" ), 
+                self.cuda_data_manager.device_data("CPI"), 
+                self.cuda_data_manager.device_data("FEDBalanceSheet"), 
+                self.cuda_data_manager.device_data("MaxFEDBalanceSheet"), 
+                self.cuda_data_manager.device_data("USDebt"), 
+                self.cuda_data_manager.device_data("MaxUSDebt"), 
+                
                 block=self.world.cuda_function_manager.block,
                 grid=self.world.cuda_function_manager.grid,
             )
             return {}  # Return empty dict. Reward arrays are updated in-place
-        rew = {"a": 0, "p": 0}
+        rew = {"a": 0, "p": 0, "f": 0}
 
         def crra_nonlinearity(x, eta):
             # Reference: https://en.wikipedia.org/wiki/Isoelastic_utility
@@ -1224,9 +1267,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             us_debt 
         ):
             return - (
-                (money_supply / self.trillion_dollar / self.money_supply) * 0.1
+                (money_supply / self.money_supply) * 0.05
                 + (balance_sheet / self.trillion_dollar / self.federal_reserve_balance_sheet) * 0.3 
-                + interest_rate * 0.1 + us_debt/self.us_debt * 0.3
+                + interest_rate * 0.05 + us_debt/self.us_debt * 0.3
             )  
 
         # Changes this last timestep:
@@ -1293,17 +1336,23 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             / self.planner_health_norm
         )
         
-        fraction_betwene_QE_and_subsidy = (np.sum(subsidy_t) / 
-            self.world.global_state["QE"][self.world.timestep]) 
+        fraction_between_QE_and_subsidy = (
+            self.world.global_state["Subsidy"][
+                self.world.timestep
+            ] / 
+            self.world.global_state["QE"][
+                self.world.timestep
+            ]
+        ) 
         
-        final_interest_rate = (self.risk_free_interest_rate + self.world.global_state["Interest Rate"][self.world.timestep]) * fraction_betwene_QE_and_subsidy
-        + self.us_treasury_yields_10_years * ( 1 - fraction_betwene_QE_and_subsidy )
+        final_interest_rate = (self.risk_free_interest_rate + self.world.global_state["Interest Rate"][self.world.timestep]) * fraction_between_QE_and_subsidy
+        + self.us_treasury_yields_10_years * ( 1 - fraction_between_QE_and_subsidy )
         
         # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
         cost_of_subsidy_t = (1 + final_interest_rate) * np.sum(subsidy_t)
         
-        probability_of_default = self.world.global_state["Interest Rate"]
-        [self.world.timestep]
+        # probability_of_default = self.world.global_state["Interest Rate"][self.world.timestep]
+        
         # Use a "crra" nonlinearity on the planner economic reward
         marginal_planner_economic_index = crra_nonlinearity(
             (np.sum(postsubsidy_productivity_t) - cost_of_subsidy_t)

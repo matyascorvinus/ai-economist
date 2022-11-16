@@ -166,6 +166,17 @@ class FoundationEnvWrapper:
             self.env.action_space["p"] = Discrete(self.env.get_agent("p").action_spaces)
         self.env.action_space["p"].dtype = np.int32
 
+        if self.env.world.federal_reserve.multi_action_mode:
+            self.env.action_space["f"] = MultiDiscrete(
+                self.env.get_agent("f").action_spaces
+            )
+
+        else:
+            self.env.action_space["f"] = Discrete(
+                self.env.get_agent("f").action_spaces
+            )
+        self.env.action_space["f"].dtype = np.int32 
+            
         # Ensure the observation and action spaces share the same keys
         assert set(self.env.observation_space.keys()) == set(
             self.env.action_space.keys()

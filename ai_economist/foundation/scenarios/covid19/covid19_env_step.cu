@@ -268,7 +268,26 @@ extern "C" {
             + kEconomicIndexWeightage * economic_index) /
             (kHealthIndexWeightage + kEconomicIndexWeightage);
     }
-
+    __device__ float get_weighted_average_federal_reserve(
+        float money_supply,
+        float money_supply_2020,
+        float balance_sheet,
+        float balance_sheet_2020,
+        float interest_rate,
+        float us_debt
+        float us_debt_2020
+    ) {
+            // return - (
+            //     (money_supply / self.money_supply) * 0.05
+            //     + (balance_sheet / self.trillion_dollar / self.federal_reserve_balance_sheet) * 0.3 
+            //     + interest_rate * 0.05 + us_debt/self.us_debt * 0.3
+            // )  
+        return -(
+                    money_supply / money_supply_2020 * 0.05
+                    + balance_sheet / balance_sheet_2020 * 0.3 /
+                    interest_rate * 0.05 + us_debt/us_debt_2020 * 0.3
+                );
+    }
     // CUDA version of scenario_step() in
     // "ai_economist.foundation.scenarios.covid19_env.py"
     __global__ void CudaCovidAndEconomySimulationStep(
@@ -316,7 +335,18 @@ extern "C" {
         float* obs_p_time,
         int * env_timestep_arr,
         const int kNumAgents,
-        const int kEpisodeLength
+        const int kEpisodeLength,
+        float* obs_f_world_agent_QE,
+        float* obs_f_world_agent_FED_Balance_Sheet,
+        float* FEDBalanceSheet,
+        float* MaxFEDBalanceSheet,
+        float* QE,
+        float* MaxQE,
+        float* MoneySupply,
+        float* CPI,
+        float* InterestRate,
+        float* TreasuryYield,
+        float* USDebt
     ) {
         const int kEnvId = blockIdx.x;
         const int kAgentId = threadIdx.x;
@@ -443,7 +473,31 @@ extern "C" {
             ] = obs_a_world_agent_postsubsidy_productivity[
                     kTimeIndependentArrayIdx
                 ];
+            
+        // Federal Reserve
+        
+            obs_f_world_agent_QE[
+                kTimeIndependentArrayIdx
+            ] = QE[kArrayIdxCurrentTime] /
+                (MaxQE[kAgentId]);
 
+            obs_f_world_agent_FED_Balance_Sheet[
+                kTimeIndependentArrayIdx
+            ] = FEDBalanceSheet[kArrayIdxCurrentTime] /
+                MaxFEDBalanceSheet;
+        // float QE_t = self.world.global_state[
+        //     "QE"
+        // ][self.world.timestep]
+        
+        // normalized_QE_t = (
+        //     QE_t / self.maximum_QE_2019_per_person
+        // )
+        
+        // current_FED_balance_sheet = self.world.global_state["FED Balance Sheet"][self.world.timestep]
+        
+        // normalized_FED_balance_sheet_t = (
+        //     current_FED_balance_sheet / self.maximum_FED_Balance_Sheet_2020
+        // )
             int t_beta = env_timestep_arr[kEnvId] - kBetaDelay + 1;
             if (t_beta < 0) {
                 obs_a_world_lagged_stringency_level[
@@ -480,6 +534,7 @@ extern "C" {
     __global__ void CudaComputeReward(
         float* rewards_a,
         float* rewards_p,
+        float* rewards_f,
         const int kNumDaysInAnYear,
         const int kValueOfLife,
         const float kRiskFreeInterestRate,
@@ -506,10 +561,21 @@ extern "C" {
         int* env_done_arr,
         int* env_timestep_arr,
         const int kNumAgents,
-        const int kEpisodeLength
+        const int kEpisodeLength,
+        float* FEDBalanceSheet,
+        float* MaxFEDBalanceSheet,
+        float* QE,
+        float* MaxQE,
+        float* MoneySupply,
+        float* CPI,
+        float* InterestRate,
+        float* TreasuryYield,
+        float* USDebt,
+        float* MaxUSDebt
     ) {
         const int kEnvId = blockIdx.x;
         const int kAgentId = threadIdx.x;
+        const float trillion_dollar = 1000000000000.0;
 
         assert(env_timestep_arr[kEnvId] > 0 &&
              env_timestep_arr[kEnvId] <= kEpisodeLength);
@@ -558,7 +624,7 @@ extern "C" {
                 marginal_agent_health_index,
                 kWeightageOnMarginalPlannerHealthIndex[kAgentId],
                 marginal_agent_economic_index);
-        } else if (kAgentId == kNumAgents - 1) {
+        } else if (kAgentId == kNumAgents - 2) {
             // Planner's rewards
             float total_marginal_deaths = 0;
             for (int ag_id = 0; ag_id < (kNumAgents - 1); ag_id ++) {
@@ -574,16 +640,23 @@ extern "C" {
 
             float total_subsidy = 0.0;
             float total_postsubsidy_productivity = 0.0;
+            float total_QE = 0.0;
             for (int ag_id = 0; ag_id < (kNumAgents - 1); ag_id ++) {
                 total_subsidy += subsidy[kArrayIndexOffset +
                     env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
                 total_postsubsidy_productivity +=
                     postsubsidy_productivity[kArrayIndexOffset +
                     env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
+                total_QE += QE[kArrayIndexOffset +
+                    env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
             }
-
-            float cost_of_subsidy = (1 + kRiskFreeInterestRate) *
+            float fraction_between_QE_and_subsidy = (total_subsidy / total_QE) 
+            float risk_free_interest_rate = 0.0
+            float final_interest_rate = (risk_free_interest_rate + InterestRate) * fraction_between_QE_and_subsidy
+                + TreasuryYield * ( 1 - fraction_between_QE_and_subsidy )
+            float cost_of_subsidy = (1 + final_interest_rate) *
                 total_subsidy;
+                
             float marginal_planner_economic_index = crra_nonlinearity(
                 (total_postsubsidy_productivity - cost_of_subsidy) /
                     kPlannerEconomicNorm,
@@ -604,6 +677,17 @@ extern "C" {
                 marginal_planner_health_index,
                 kWeightageOnMarginalPlannerEconomicIndex,
                 marginal_planner_economic_index);
+        } 
+        // Federal Reserve
+        else {
+            rewards_f[kEnvId] = get_weighted_average_federal_reserve(
+                MoneySupply,
+                MaxMoneySupply * trillion_dollar,
+                FEDBalanceSheet,
+                MaxFEDBalanceSheet * trillion_dollar ,
+                InterestRate,
+                USDebt,
+                MaxUSDebt* trillion_dollar);
         }
 
         // Wait here for all agents to finish computing rewards

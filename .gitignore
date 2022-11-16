@@ -142,3 +142,5 @@ cython_debug/
 .DS_Store
 requirements.txt
 ai_economist/foundation/activation_code.txt
+
+ai_economist/requirements.txt
