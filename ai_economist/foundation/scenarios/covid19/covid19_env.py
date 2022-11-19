@@ -1544,10 +1544,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "Subsidy",
             "Postsubsidy Productivity",
             "QE",
-            "Money Supply",
+            "QE Level"
+            "Money Supply", 
             "CPI",
             "FED Balance Sheet",
-            "US Debt"
+            "US Debt",
+            "Treasury Yield"
         ]
         
          
