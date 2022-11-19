@@ -481,7 +481,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
-            name="MoneySupply",
+            name="MaxMoneySupply",
             data=self.money_supply, # Money Supply 2020
             save_copy_and_apply_at_reset=True,
         )
@@ -762,6 +762,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("QE"),  
                 self.cuda_data_manager.device_data("MaxQE"), 
                 self.cuda_data_manager.device_data("MoneySupply"), 
+                self.cuda_data_manager.device_data("MaxMoneySupply"), 
                 self.cuda_data_manager.device_data("InterestRate"), 
                 self.cuda_data_manager.device_data("TreasuryYield" ), 
                 self.cuda_data_manager.device_data("CPI"), 
@@ -1531,23 +1532,23 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Use floats by default for the SIR dynamics
         if dtype is None:
             dtype = self.np_float_dtype
-        # assert key in [
-        #     "Susceptible",
-        #     "Infected",
-        #     "Recovered",
-        #     "Deaths",
-        #     "Unemployed",
-        #     "Vaccinated",
-        #     "Stringency Level",
-        #     "Subsidy Level",
-        #     "Subsidy",
-        #     "Postsubsidy Productivity",
-        #     "QE",
-        #     "Money Supply",
-        #     "CPI",
-        #     "FED Balance Sheet",
-        #     "US Debt"
-        # ]
+        assert key in [
+            "Susceptible",
+            "Infected",
+            "Recovered",
+            "Deaths",
+            "Unemployed",
+            "Vaccinated",
+            "Stringency Level",
+            "Subsidy Level",
+            "Subsidy",
+            "Postsubsidy Productivity",
+            "QE",
+            "Money Supply",
+            "CPI",
+            "FED Balance Sheet",
+            "US Debt"
+        ]
         
          
         
