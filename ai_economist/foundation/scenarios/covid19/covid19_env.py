@@ -104,8 +104,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         start_date="2020-03-22",
         pop_between_age_18_65=0.6,
         infection_too_sick_to_work_rate=0.1,
-        risk_free_interest_rate=0.0,
-        us_treasury_yields_10_years=0.02,
+        risk_free_interest_rate=0.025,
+        us_treasury_yields_10_years=0.1,
         fed_interest_rate=0.025,
         economic_reward_crra_eta=2,
         health_priority_scaling_agents=1,
@@ -949,8 +949,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             # Federal Reserve-related
             daily_QE = self.world.global_state["QE"][curr_t]
             daily_MoneySupply = self.world.global_state["Money Supply"][curr_t]
-            daily_InterestRate = self.world.global_state["Interest Rate"][curr_t]
-            daily_TreasuryYield = self.world.global_state["Treasury Yield"][curr_t]
+            # daily_InterestRate = self.world.global_state["Interest Rate"][curr_t]
+            # daily_TreasuryYield = self.world.global_state["Treasury Yield"][curr_t]
             daily_CPI = self.world.global_state["CPI"][curr_t]
             daily_FEDBalanceSheet = self.world.global_state["FED Balance Sheet"][curr_t]
             daily_USDebt = self.world.global_state["US Debt"][curr_t]
@@ -1038,15 +1038,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             self.world.federal_reserve.state["Money Supply"] = np.sum(
                 daily_MoneySupply
             )
-            self.world.federal_reserve.state["Interest Rate"] = np.sum(
-                daily_InterestRate
-            )
-            self.world.federal_reserve.state["Treasury Yield"] = np.sum(
-                daily_TreasuryYield
-            )
-            self.world.federal_reserve.state["CPI"] = np.sum(
-                daily_CPI
-            )
+            # self.world.federal_reserve.state["CPI"] = np.sum(
+            #     daily_CPI
+            # )
             self.world.federal_reserve.state["FED Balance Sheet"] = np.sum(
                 daily_FEDBalanceSheet
             )
@@ -1532,25 +1526,25 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Use floats by default for the SIR dynamics
         if dtype is None:
             dtype = self.np_float_dtype
-        assert key in [
-            "Susceptible",
-            "Infected",
-            "Recovered",
-            "Deaths",
-            "Unemployed",
-            "Vaccinated",
-            "Stringency Level",
-            "Subsidy Level",
-            "Subsidy",
-            "Postsubsidy Productivity",
-            "QE",
-            "QE Level"
-            "Money Supply", 
-            "CPI",
-            "FED Balance Sheet",
-            "US Debt",
-            "Treasury Yield"
-        ]
+        # assert key in [
+        #     "Susceptible",
+        #     "Infected",
+        #     "Recovered",
+        #     "Deaths",
+        #     "Unemployed",
+        #     "Vaccinated",
+        #     "Stringency Level",
+        #     "Subsidy Level",
+        #     "Subsidy",
+        #     "Postsubsidy Productivity",
+        #     "QE",
+        #     "QE Level"
+        #     "Money Supply", 
+        #     "CPI",
+        #     "FED Balance Sheet",
+        #     "US Debt",
+        #     "Treasury Yield"
+        # ]
         
          
         

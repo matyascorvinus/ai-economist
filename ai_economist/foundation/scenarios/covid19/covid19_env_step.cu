@@ -274,7 +274,7 @@ extern "C" {
         float balance_sheet,
         float balance_sheet_2020,
         float interest_rate,
-        float us_debt
+        float us_debt,
         float us_debt_2020
     ) {
             // return - (
@@ -563,16 +563,16 @@ extern "C" {
         const int kNumAgents,
         const int kEpisodeLength,
         float* QE,
-        float* MaxQE,
+        float MaxQE,
         float* MoneySupply,
-        float* MaxMoneySupply,
+        float MaxMoneySupply,
         float* FEDBalanceSheet,
-        float* MaxFEDBalanceSheet,
+        float MaxFEDBalanceSheet,
         float* CPI,
         float* InterestRate,
-        float* TreasuryYield,
+        float TreasuryYield,
         float* USDebt,
-        float* MaxUSDebt
+        float MaxUSDebt
     ) {
         const int kEnvId = blockIdx.x;
         const int kAgentId = threadIdx.x;
@@ -642,19 +642,28 @@ extern "C" {
             float total_subsidy = 0.0;
             float total_postsubsidy_productivity = 0.0;
             float total_QE = 0.0;
-            for (int ag_id = 0; ag_id < (kNumAgents - 1); ag_id ++) {
+            float total_Money_Supply = 0.0;
+            float total_FEDBalanceSheet = 0.0;
+            for (int ag_id = 0; ag_id < (kNumAgents - 2); ag_id ++) {
                 total_subsidy += subsidy[kArrayIndexOffset +
-                    env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
+                    env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
                 total_postsubsidy_productivity +=
                     postsubsidy_productivity[kArrayIndexOffset +
-                    env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
+                    env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
+
                 total_QE += QE[kArrayIndexOffset +
-                    env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
-            }
-            float fraction_between_QE_and_subsidy = (total_subsidy / total_QE) 
-            float risk_free_interest_rate = 0.0
-            float final_interest_rate = (risk_free_interest_rate + InterestRate) * fraction_between_QE_and_subsidy
-                + TreasuryYield * ( 1 - fraction_between_QE_and_subsidy )
+                    env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
+                total_Money_Supply += MoneySupply[kArrayIndexOffset +
+                    env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
+                
+                total_FEDBalanceSheet += FEDBalanceSheet[kArrayIndexOffset +
+                    env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
+            } 
+            float fraction_between_QE_and_subsidy = (total_subsidy / total_QE) ;
+            float risk_free_interest_rate = 0.025;
+            float final_interest_rate = (risk_free_interest_rate) 
+            * fraction_between_QE_and_subsidy
+                + TreasuryYield * ( 1 - fraction_between_QE_and_subsidy );
             float cost_of_subsidy = (1 + final_interest_rate) *
                 total_subsidy;
                 
@@ -681,13 +690,33 @@ extern "C" {
         } 
         // Federal Reserve
         else {
+            
+            float total_QE = 0.0;
+            float total_Money_Supply = 0.0;
+            float total_FEDBalanceSheet = 0.0;
+            float total_US_Debt = 0.0;
+            for (int ag_id = 0; ag_id < (kNumAgents - 2); ag_id ++) {
+                
+                total_QE += QE[kArrayIndexOffset +
+                    env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
+
+                total_Money_Supply += MoneySupply[kArrayIndexOffset +
+                    env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
+                
+                total_FEDBalanceSheet += FEDBalanceSheet[kArrayIndexOffset +
+                    env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
+
+                total_US_Debt += US_Debt[kArrayIndexOffset +
+                    env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
+            }
+
             rewards_f[kEnvId] = get_weighted_average_federal_reserve(
-                MoneySupply,
+                total_Money_Supply,
                 MaxMoneySupply * trillion_dollar,
-                FEDBalanceSheet,
+                total_FEDBalanceSheet,
                 MaxFEDBalanceSheet * trillion_dollar ,
                 InterestRate,
-                USDebt,
+                total_US_Debt,
                 MaxUSDebt* trillion_dollar);
         }
 
