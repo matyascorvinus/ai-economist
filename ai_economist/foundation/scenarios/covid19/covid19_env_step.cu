@@ -479,7 +479,7 @@ extern "C" {
             obs_f_world_agent_QE[
                 kTimeIndependentArrayIdx
             ] = QE[kArrayIdxCurrentTime] /
-                (MaxQE[kAgentId]);
+                (MaxQE);
 
             obs_f_world_agent_FED_Balance_Sheet[
                 kTimeIndependentArrayIdx
