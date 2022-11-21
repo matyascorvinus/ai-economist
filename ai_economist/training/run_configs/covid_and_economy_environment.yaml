@@ -16,6 +16,10 @@ env:
             num_subsidy_levels: 20
             subsidy_interval: 90
             max_annual_subsidy_per_person: 20000
+        - FederalQuantitativeEasing: 
+            num_QE_levels: 20
+            QE_interval: 90
+            max_annual_QE_per_person: 5000
         - VaccinationCampaign:
             daily_vaccines_per_million_people: 3000
             delivery_interval: 1
@@ -29,10 +33,12 @@ env:
     infection_too_sick_to_work_rate: 0.1
     multi_action_mode_agents: False
     multi_action_mode_planner: False
-    n_agents: 51
+    n_agents: 52 # 50 states + 1 Federal Government + 1 Federal Reserve
     path_to_data_and_fitted_params: ""
     pop_between_age_18_65: 0.6
     risk_free_interest_rate: 0.03
+    us_treasury_yields_10_years: 0.0233
+    fed_interest_rate: 0.25
     world_size: [1, 1]
     start_date: "2020-03-22"
     use_real_world_data: False
@@ -55,7 +61,20 @@ policy: # list all the policies below
             type: "fully_connected"
             fc_dims: [256, 256]
             model_ckpt_filepath: ""
-    p:
+    p: # Federal Government
+        to_train: True
+        algorithm: "PPO"
+        vf_loss_coeff: 1
+        entropy_coeff: # annealing entropy over time
+        - [0, 0.5]
+        - [50000000, 0.05]
+        gamma: 0.98
+        lr: 0.0001
+        model:
+            type: "fully_connected"
+            fc_dims: [256, 256]
+            model_ckpt_filepath: ""
+    f: # Federal Reserve
         to_train: True
         algorithm: "PPO"
         vf_loss_coeff: 1
