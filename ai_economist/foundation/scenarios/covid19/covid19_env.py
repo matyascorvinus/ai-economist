@@ -1515,7 +1515,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.world.planner.state["Economic Index"] = np.array([0]).astype(
             self.np_float_dtype
         )
-
+        
+        self.world.federal_reserve.state["Money Supply"] = np.array([0]).astype(
+            self.np_float_dtype
+        )
+        self.world.federal_reserve.state["FED Balance Sheet"] = np.array([0]).astype(
+            self.np_float_dtype
+        )
+        
         self.world.planner.state["Date"] = current_date_string
 
         # Reset any manually set parameter modulations
