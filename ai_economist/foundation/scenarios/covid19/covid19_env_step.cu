@@ -339,13 +339,13 @@ extern "C" {
         float* obs_f_world_agent_QE,
         float* obs_f_world_agent_FED_Balance_Sheet,
         float* FEDBalanceSheet,
-        float* MaxFEDBalanceSheet,
+        float MaxFEDBalanceSheet,
         float* QE,
-        float* MaxQE,
+        float MaxQE,
         float* MoneySupply,
-        float* CPI,
-        float* InterestRate,
-        float* TreasuryYield,
+        float CPI,
+        float InterestRate,
+        float TreasuryYield,
         float* USDebt
     ) {
         const int kEnvId = blockIdx.x;
@@ -569,7 +569,7 @@ extern "C" {
         float* FEDBalanceSheet,
         float MaxFEDBalanceSheet,
         float* CPI,
-        float* InterestRate,
+        float InterestRate,
         float TreasuryYield,
         float* USDebt,
         float MaxUSDebt
@@ -706,7 +706,7 @@ extern "C" {
                 total_FEDBalanceSheet += FEDBalanceSheet[kArrayIndexOffset +
                     env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
 
-                total_US_Debt += US_Debt[kArrayIndexOffset +
+                total_US_Debt += USDebt[kArrayIndexOffset +
                     env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
             }
 
