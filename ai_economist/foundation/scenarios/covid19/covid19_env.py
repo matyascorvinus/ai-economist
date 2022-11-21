@@ -1344,7 +1344,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         + self.us_treasury_yields_10_years * ( 1 - fraction_between_QE_and_subsidy )
         
         # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
-        cost_of_subsidy_t = (1 + final_interest_rate) * np.sum(subsidy_t)
+        cost_of_subsidy_t = (1 + np.average(final_interest_rate)) * np.sum(subsidy_t)
         
         # probability_of_default = self.world.global_state["Interest Rate"][self.world.timestep]
         

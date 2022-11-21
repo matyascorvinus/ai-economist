@@ -38,42 +38,39 @@ except ValueError:
 # @component_registry.add
 # class FederalInterestRate(BaseComponent): 
 
-#     name = "FederalQuantitativeEasing"
+#     name = "FederalInterestRate"
 #     required_entities = []
 #     agent_subclasses = ["BasicPlanner", "BasicFederalReserve"]
 
 #     def __init__(
 #         self,
+#         interest_rate_intervals=90,
+#         num_interest_rate_levels=40,  # numbers from 0 - 40 - Highest interest rate should be 20%
 #         *base_component_args, 
 #         **base_component_kwargs,
 #     ):
          
 #         self.np_int_dtype = np.int32 
-
+#         self.num_interest_rate_levels = num_interest_rate_levels
+#         self.interest_rate_intervals = interest_rate_intervals
 #         super().__init__(*base_component_args, **base_component_kwargs)
-#         self.fed_interest_rate = 0.05
-
-#         # (This will be overwritten during reset; see below)
-#         self.max_daily_QE_per_state = np.array(
-#             self.n_agents, dtype=self.np_int_dtype
-#         )
+#         # (This will be overwritten during reset; see below) 
+#         self.fed_interest_rate = 0.0
 
 #     def get_additional_state_fields(self, agent_cls_name):
 #         if agent_cls_name == "BasicFederalReserve":
-#             return {"Total QE": 0, "Current QE Level": 0}
+#             return {"Interest Rate": 0, "Current Interest Rate Level": 0}
 #         return {}
 
 #     def additional_reset_steps(self):
-#         # Pre-compute maximum state-specific QE levels
-#         self.max_daily_QE_per_state = (
-#             self.world.us_state_population * self.max_annual_QE_per_person / 365
-#         )
+#         # Pre-compute maximum state-specific Interest Rate levels
+#         self.fed_interest_rate = self.world.global_state["Interest Rate"];
 
 #     def get_n_actions(self, agent_cls_name):
 #         if agent_cls_name == "BasicFederalReserve":
 #             # Number of non-zero QE levels
 #             # (the action 0 pertains to the no-QE case)
-#             return self.num_QE_levels
+#             return self.num_interest_rate_levels
 #         return None
 
 #     def generate_masks(self, completions=0):
@@ -81,7 +78,7 @@ except ValueError:
 #         if self.world.use_real_world_policies:
 #             masks[self.world.federal_reserve.idx] = self.default_federal_reserve_action_mask
 #         else:
-#             if self.world.timestep % self.QE_interval == 0:
+#             if self.world.timestep % self.interest_rate_intervals == 0:
 #                 masks[self.world.federal_reserve.idx] = self.default_federal_reserve_action_mask
 #             else:
 #                 masks[self.world.federal_reserve.idx] = self.no_op_federal_reserve_action_mask
@@ -112,8 +109,7 @@ except ValueError:
 #                 self.world.cuda_data_manager.device_data("QE_level"),
 #                 self.world.cuda_data_manager.device_data("QE"),
 #                 self.world.cuda_data_manager.device_data("QE_interval"),
-#                 self.world.cuda_data_manager.device_data("num_QE_levels"),
-#                 self.world.cuda_data_manager.device_data("max_daily_QE_per_state"),
+#                 self.world.cuda_data_manager.device_data("num_QE_levels"), 
 #                 self.world.cuda_data_manager.device_data("default_federal_reserve_action_mask"),
 #                 self.world.cuda_data_manager.device_data("no_op_federal_reserve_action_mask"),
 #                 self.world.cuda_data_manager.device_data(f"{_ACTIONS}_p"),
@@ -167,12 +163,12 @@ except ValueError:
 #                         self._QE_level_array[t_idx] += _QE_level
 #                 QE_level = self._QE_level_array[self.world.timestep - 1]
 #             else:
-#                 # Update the QE level only every self.QE_interval, since the
-#                 # other actions are masked out.
-#                 if (self.world.timestep - 1) % self.QE_interval == 0:
-#                     QE_level = self.world.federal_reserve.get_component_action(self.name)
-#                 else:
-#                     QE_level = self.world.federal_reserve.state["Current QE Level"]
+#                 Update the QE level only every self.QE_interval, since the
+#                 other actions are masked out.
+#             if (self.world.timestep - 1) % self.QE_interval == 0:
+#                 QE_level = self.world.federal_reserve.get_component_action(self.name)
+#             else:
+#                 QE_level = self.world.federal_reserve.state["Current QE Level"]
 
 #             assert 0 <= QE_level <= self.num_QE_levels
 #             self.world.federal_reserve.state["Current QE Level"] = np.array(
@@ -203,7 +199,7 @@ except ValueError:
 
 #         # Normalized observations
 #         obs_dict = dict()
-#         obs_dict["p"] = {
+#         obs_dict["f"] = {
 #             "t_until_next_QE": t_vec / self.QE_interval,
 #             "current_QE_level": sl_vec / self.num_QE_levels,
 #         }
