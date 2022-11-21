@@ -1452,6 +1452,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.set_global_state("Postsubsidy Productivity", dtype=self.np_float_dtype)
          
         self.set_global_state("QE Level", dtype=self.np_float_dtype)
+        self.set_global_state("Money Supply", dtype=self.np_float_dtype)
         self.set_global_state("QE", dtype=self.np_float_dtype) 
         self.set_global_state("US Debt", self.us_debt, dtype=self.np_float_dtype)
         self.set_global_state("CPI", self.us_cpi, dtype=self.np_float_dtype) 
