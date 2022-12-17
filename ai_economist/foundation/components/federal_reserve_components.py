@@ -305,6 +305,10 @@ class FederalQuantitativeEasing(BaseComponent):
             data=self.num_QE_levels,
         ) 
         data_dict.add_data(
+            name="max_daily_QE_per_state",
+            data=self.max_daily_QE_per_state,
+        ) 
+        data_dict.add_data(
             name="default_federal_reserve_action_mask",
             data=[1] + self.default_federal_reserve_action_mask,
         )
