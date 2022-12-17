@@ -343,13 +343,13 @@ class FederalQuantitativeEasing(BaseComponent):
                     f"{_OBSERVATIONS}_a_{self.name}-current_QE_level"
                 ),
                 self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_p_{self.name}-t_until_next_QE"
+                    f"{_OBSERVATIONS}_f_{self.name}-t_until_next_QE"
                 ),
                 self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_p_{self.name}-current_QE_level"
+                    f"{_OBSERVATIONS}_f_{self.name}-current_QE_level"
                 ),
                 self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_p_action_mask"
+                    f"{_OBSERVATIONS}_f_action_mask"
                 ),
                 self.world.cuda_data_manager.device_data("_timestep_"),
                 self.world.cuda_data_manager.meta_info("n_agents"),
@@ -430,7 +430,7 @@ class FederalQuantitativeEasing(BaseComponent):
 
         # Normalized observations
         obs_dict = dict()
-        obs_dict["p"] = {
+        obs_dict["a"] = {
             "t_until_next_QE": t_vec / self.QE_interval,
             "current_QE_level": sl_vec / self.num_QE_levels,
         }
