@@ -41,7 +41,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
     """
     A simulation to model health and economy dynamics amidst the COVID-19 pandemic.
     The environment comprising 51 agents (each agent corresponding to a US state and
-    Washington D.C.) and the Federal Government (planner). The state agents decide the
+    Washington D.C.) and the Federal Government (planner) and Federal Reserve. The state agents decide the
     stringency level of the policy response to the pandemic, while the federal
     government provides subsidies to eligible individuals.
 
@@ -712,6 +712,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         data_dict.add_data(
             name="us_treasury_yields_10_years",
             data=self.us_treasury_yields_10_years,
+        )
+        data_dict.add_data(
+            name="fed_interest_rate",
+            data=self.fed_interest_rate,
         )
         data_dict.add_data(
             name="agents_health_norm",
