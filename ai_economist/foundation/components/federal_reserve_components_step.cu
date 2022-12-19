@@ -14,14 +14,14 @@ extern "C" {
         const int kQEInterval,
         const int kNumQELevels,
         const float * KMaxDailyQEPerState,
-        const int * kDefaultPlannerActionMask,
-        const int * kNoOpPlannerActionMask,
+        const int * kDefaultFederalReserveActionMask,
+        const int * kNoOpFederalReserveActionMask,
         int * actions,
         float * obs_a_time_until_next_QE,
         float * obs_a_current_QE_level,
-        float * obs_p_time_until_next_QE,
-        float * obs_p_current_QE_level,
-        float * obs_p_action_mask,
+        float * obs_f_time_until_next_QE,
+        float * obs_f_current_QE_level,
+        float * obs_f_action_mask,
         int * env_timestep_arr,
         const int kNumAgents,
         const int kEpisodeLength
@@ -80,24 +80,24 @@ extern "C" {
                 int action_mask_array_index = kEnvId *
                     (kNumQELevels + 1) + action_id;
                 if (env_timestep_arr[kEnvId] % kQEInterval == 0) {
-                    obs_p_action_mask[action_mask_array_index] =
-                        kDefaultPlannerActionMask[action_id];
+                    obs_f_action_mask[action_mask_array_index] =
+                        kDefaultFederalReserveActionMask[action_id];
                 } else {
-                    obs_p_action_mask[action_mask_array_index] =
-                        kNoOpPlannerActionMask[action_id];
+                    obs_f_action_mask[action_mask_array_index] =
+                        kNoOpFederalReserveActionMask[action_id];
                 }
             }
             
-            // Update planner obs after the agent's obs are updated
+            // Update FederalReserve obs after the agent's obs are updated
             __syncthreads();
 
             if (kAgentId == (kNumAgents - 1)) {
                 // Just use the values for agent id 0
-                obs_p_time_until_next_QE[kEnvId] =
+                obs_f_time_until_next_QE[kEnvId] =
                     obs_a_time_until_next_QE[
                         kEnvId * (kNumAgents - 1)
                     ];
-                obs_p_current_QE_level[kEnvId] = 
+                obs_f_current_QE_level[kEnvId] = 
                     obs_a_current_QE_level[
                         kEnvId * (kNumAgents - 1)
                     ];

@@ -35,21 +35,21 @@ extern "C" {
 
         assert(env_timestep_arr[kEnvId] > 0 &&
             env_timestep_arr[kEnvId] <= kEpisodeLength);
-        assert (kAgentId <= kNumAgents - 1);
+        assert (kAgentId <= kNumAgents- 2);
 
         // Update the stringency levels for the US states
-        if (kAgentId < (kNumAgents - 1)) {
+        if (kAgentId < (kNumAgents- 2)) {
             // Indices for time-dependent and time-independent arrays
             // Time dependent arrays have shapes
-            // (num_envs, kEpisodeLength + 1, kNumAgents - 1)
-            // Time independent arrays have shapes (num_envs, kNumAgents - 1)
+            // (num_envs, kEpisodeLength + 1, kNumAgents- 2)
+            // Time independent arrays have shapes (num_envs, kNumAgents- 2)
             const int kArrayIdxOffset = kEnvId * (kEpisodeLength + 1) *
-                (kNumAgents - 1);
+                (kNumAgents- 2);
             int time_dependent_array_index_curr_t = kArrayIdxOffset +
-                env_timestep_arr[kEnvId] * (kNumAgents - 1) + kAgentId;
+                env_timestep_arr[kEnvId] * (kNumAgents- 2) + kAgentId;
             int time_dependent_array_index_prev_t = kArrayIdxOffset +
-                (env_timestep_arr[kEnvId] - 1) * (kNumAgents - 1) + kAgentId;
-            const int time_independent_array_index = kEnvId * (kNumAgents - 1) +
+                (env_timestep_arr[kEnvId]- 2) * (kNumAgents- 2) + kAgentId;
+            const int time_independent_array_index = kEnvId * (kNumAgents- 2) +
                 kAgentId;
 
             // action is not a NO-OP
@@ -83,7 +83,7 @@ extern "C" {
                 action_id++) {
                 int action_mask_array_index =
                     kEnvId * (kNumStringencyLevels + 1) *
-                    (kNumAgents - 1) + action_id * (kNumAgents - 1) + kAgentId;
+                    (kNumAgents- 2) + action_id * (kNumAgents- 2) + kAgentId;
                 if (env_timestep_arr[kEnvId] < action_in_cooldown_until[
                     time_independent_array_index]
                 ) {
@@ -99,9 +99,9 @@ extern "C" {
         // Update planner obs after all the agents' obs are updated
         __syncthreads();
 
-        if (kAgentId == kNumAgents - 1) {
-            for (int ag_id = 0; ag_id < (kNumAgents - 1); ag_id++) {
-                const int kIndex = kEnvId * (kNumAgents - 1) + ag_id;
+        if (kAgentId == kNumAgents- 2) {
+            for (int ag_id = 0; ag_id < (kNumAgents- 2); ag_id++) {
+                const int kIndex = kEnvId * (kNumAgents- 2) + ag_id;
                 obs_p_stringency_policy_indicators[
                     kIndex
                 ] = 
@@ -135,28 +135,28 @@ extern "C" {
 
         assert(env_timestep_arr[kEnvId] > 0 &&
             env_timestep_arr[kEnvId] <= kEpisodeLength);
-        assert (kAgentId <= kNumAgents - 1);
+        assert (kAgentId <= kNumAgents- 2);
 
         int t_since_last_subsidy = env_timestep_arr[kEnvId] %
             kSubsidyInterval;
 
         // Setting the (federal government) planner's subsidy level
         // to be the subsidy level for all the US states
-        if (kAgentId < kNumAgents - 1) {
+        if (kAgentId < kNumAgents - 2) {
             // Indices for time-dependent and time-independent arrays
             // Time dependent arrays have shapes (num_envs,
-            // kEpisodeLength + 1, kNumAgents - 1)
-            // Time independent arrays have shapes (num_envs, kNumAgents - 1)
+            // kEpisodeLength + 1, kNumAgents- 2)
+            // Time independent arrays have shapes (num_envs, kNumAgents- 2)
             const int kArrayIdxOffset = kEnvId * (kEpisodeLength + 1) *
-                (kNumAgents - 1);
+                (kNumAgents - 2);
             int time_dependent_array_index_curr_t = kArrayIdxOffset +
-                env_timestep_arr[kEnvId] * (kNumAgents - 1) + kAgentId;
+                env_timestep_arr[kEnvId] * (kNumAgents- 2) + kAgentId;
             int time_dependent_array_index_prev_t = kArrayIdxOffset +
-                (env_timestep_arr[kEnvId] - 1) * (kNumAgents - 1) + kAgentId;
+                (env_timestep_arr[kEnvId]- 2) * (kNumAgents- 2) + kAgentId;
             const int time_independent_array_index = kEnvId *
-                (kNumAgents - 1) + kAgentId;
+                (kNumAgents- 2) + kAgentId;
 
-            if ((env_timestep_arr[kEnvId] - 1) % kSubsidyInterval == 0) {
+            if ((env_timestep_arr[kEnvId]- 2) % kSubsidyInterval == 0) {
                 assert(0 <= actions[kEnvId] <= kNumSubsidyLevels);
                 subsidy_level[time_dependent_array_index_curr_t] =
                     actions[kEnvId];
@@ -178,7 +178,7 @@ extern "C" {
                 time_independent_array_index] =
                     subsidy_level[time_dependent_array_index_curr_t] /
                     static_cast<float>(kNumSubsidyLevels);
-        } else if (kAgentId == (kNumAgents - 1)) {
+        } else if (kAgentId == (kNumAgents - 2)) {
             for (int action_id = 0; action_id < kNumSubsidyLevels + 1;
                 action_id++) {
                 int action_mask_array_index = kEnvId *
@@ -194,15 +194,15 @@ extern "C" {
             // Update planner obs after the agent's obs are updated
             __syncthreads();
 
-            if (kAgentId == (kNumAgents - 1)) {
+            if (kAgentId == (kNumAgents - 2)) {
                 // Just use the values for agent id 0
                 obs_p_time_until_next_subsidy[kEnvId] =
                     obs_a_time_until_next_subsidy[
-                        kEnvId * (kNumAgents - 1)
+                        kEnvId * (kNumAgents- 2)
                     ];
                 obs_p_current_subsidy_level[kEnvId] = 
                     obs_a_current_subsidy_level[
-                        kEnvId * (kNumAgents - 1)
+                        kEnvId * (kNumAgents- 2)
                     ];
             }
         }
@@ -226,7 +226,7 @@ extern "C" {
         assert(env_timestep_arr[kEnvId] > 0 && env_timestep_arr[kEnvId] <=
             kEpisodeLength);
         assert(kTimeWhenVaccineDeliveryBegins > 0);
-        assert (kAgentId <= kNumAgents - 1);
+        assert (kAgentId <= kNumAgents- 2);
 
         // CUDA version of generate observations()
         int t_first_delivery = kTimeWhenVaccineDeliveryBegins +
@@ -243,9 +243,9 @@ extern "C" {
         }
 
         // Update the vaccinated numbers for just the US states
-        if (kAgentId < (kNumAgents - 1)) {
+        if (kAgentId < (kNumAgents- 2)) {
             const int time_independent_array_index = kEnvId *
-                (kNumAgents - 1) + kAgentId;
+                (kNumAgents- 2) + kAgentId;
             if ((env_timestep_arr[kEnvId] >= kTimeWhenVaccineDeliveryBegins) &&
                 (env_timestep_arr[kEnvId] % kDeliveryInterval == 0)) {
                 num_vaccines_available_t[time_independent_array_index] =
@@ -255,7 +255,7 @@ extern "C" {
             }
             obs_a_vaccination_campaign_t_until_next_vaccines[
                 time_independent_array_index] = t_until_next_vac;
-        } else if (kAgentId == kNumAgents - 1) {
+        } else if (kAgentId == kNumAgents- 2) {
             obs_p_vaccination_campaign_t_until_next_vaccines[kEnvId] =
             t_until_next_vac;
         }

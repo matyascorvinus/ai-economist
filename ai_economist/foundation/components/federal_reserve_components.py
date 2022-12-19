@@ -335,7 +335,7 @@ class FederalQuantitativeEasing(BaseComponent):
                 self.world.cuda_data_manager.device_data("max_daily_QE_per_state"),
                 self.world.cuda_data_manager.device_data("default_federal_reserve_action_mask"),
                 self.world.cuda_data_manager.device_data("no_op_federal_reserve_action_mask"),
-                self.world.cuda_data_manager.device_data(f"{_ACTIONS}_p"),
+                self.world.cuda_data_manager.device_data(f"{_ACTIONS}_f"),
                 self.world.cuda_data_manager.device_data(
                     f"{_OBSERVATIONS}_a_{self.name}-t_until_next_QE"
                 ),
