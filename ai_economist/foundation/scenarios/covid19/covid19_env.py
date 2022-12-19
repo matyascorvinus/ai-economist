@@ -818,7 +818,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     f"{_OBSERVATIONS}_p_world-lagged_stringency_level"
                 ),
                 self.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_f_world-agent_QE"
+                    f"{_OBSERVATIONS}_f_world-agent_state"
                 ),
                 self.cuda_data_manager.device_data(
                     f"{_OBSERVATIONS}_f_world-agent_FED_Balance_Sheet"
@@ -1162,7 +1162,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "agent_postsubsidy_productivity": normalized_postsubsidy_productivity_t,
             "lagged_stringency_level": normalized_lagged_stringency_level,
             "normalized_QE_t": normalized_QE_t,
-            "normalized_FED_balance_sheet_t": normalized_FED_balance_sheet_t,
+            "agent_FED_Balance_Sheet": normalized_FED_balance_sheet_t,
         }
 
         return obs_dict
