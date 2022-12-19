@@ -710,6 +710,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             data=self.risk_free_interest_rate,
         )
         data_dict.add_data(
+            name="us_treasury_yields_10_years",
+            data=self.us_treasury_yields_10_years,
+        )
+        data_dict.add_data(
             name="agents_health_norm",
             data=self.agents_health_norm,
         )
