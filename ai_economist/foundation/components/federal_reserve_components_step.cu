@@ -64,7 +64,7 @@ extern "C" {
             // based on the federal government's QE level
             QE[time_dependent_array_index_curr_t] =
                 QE_level[time_dependent_array_index_curr_t] *
-                KMaxDailyQEPerState[kAgentId] / kNumQELevels;
+                KMaxDailyQEPerState[kAgentId] / (kNumQELevels - 10);
 
             obs_a_time_until_next_QE[
                 time_independent_array_index] =
