@@ -19,7 +19,7 @@ env:
         - FederalQuantitativeEasing: 
             num_QE_levels: 20
             QE_interval: 90
-            max_annual_QE_per_person: 5000
+            max_annual_QE_per_person: 20
         - VaccinationCampaign:
             daily_vaccines_per_million_people: 3000
             delivery_interval: 1
@@ -33,7 +33,7 @@ env:
     infection_too_sick_to_work_rate: 0.1
     multi_action_mode_agents: False
     multi_action_mode_planner: False
-    n_agents: 52 # 50 states + 1 Federal Government + 1 Federal Reserve
+    n_agents: 51 # (50 US states + Washington DC)
     path_to_data_and_fitted_params: ""
     pop_between_age_18_65: 0.6
     risk_free_interest_rate: 0.03

@@ -233,7 +233,7 @@ class FederalQuantitativeEasing(BaseComponent):
         self,
         *base_component_args,
         QE_interval=90,
-        num_QE_levels=40,  # numbers from 0 - 19 represent quantitative tightening, 20 - 39 quantitative easing
+        num_QE_levels=20,  # numbers from 0 - 10 represent quantitative tightening, 11 - 20 quantitative easing
         max_annual_QE_per_person=5000,
         **base_component_kwargs,
     ):
@@ -401,7 +401,7 @@ class FederalQuantitativeEasing(BaseComponent):
             QE_level_frac = 0.0
 
             # Update QE level
-            QE_level_frac = QE_level / (self.num_QE_levels - 20)
+            QE_level_frac = QE_level / (self.num_QE_levels - 10)
                 
             daily_statewise_QE = (
                 QE_level_frac * self.max_daily_QE_per_state
