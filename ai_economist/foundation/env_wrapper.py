@@ -11,6 +11,7 @@ The env wrapper class
 import logging
 
 import GPUtil
+import torch
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
@@ -377,7 +378,8 @@ class FoundationEnvWrapper:
 
             # Compute rewards
             self.env.generate_rewards()
-
+            cpu = torch.device('cpu')
+            self.env.cuda_data_manager._device_data_via_torch.to(cpu)
             result = None  # Do not return anything
         else:
             assert actions is not None, "Please provide actions to step with."
