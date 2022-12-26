@@ -41,49 +41,52 @@ env_registrar.add_cuda_env_src_path(
     os.path.join(this_file_dir, "../ai_economist/foundation/scenarios/covid19/covid19_build.cu")
 )
 env_configs = {
-    "test1": {
-        "collate_agent_step_and_reset_data": True,
-        "components": [
-            {"ControlUSStateOpenCloseStatus": {"action_cooldown_period": 28}},
-            {
-                "FederalGovernmentSubsidy": {
-                    "num_subsidy_levels": 20,
-                    "subsidy_interval": 90,
-                    "max_annual_subsidy_per_person": 20000,
-                }
-            },
-            {
-                "VaccinationCampaign": {
-                    "daily_vaccines_per_million_people": 3000,
-                    "delivery_interval": 1,
-                    "vaccine_delivery_start_date": "2021-01-12",
-                }
-            },
+    "test1":  {
+        'collate_agent_step_and_reset_data': True,
+        'components': [
+            {'ControlUSStateOpenCloseStatus': {'action_cooldown_period': 28}},
+            {'FederalGovernmentSubsidy': {'num_subsidy_levels': 20,
+                'subsidy_interval': 90,
+                'max_annual_subsidy_per_person': 20000}},
+            {'VaccinationCampaign': {'daily_vaccines_per_million_people': 3000,
+                'delivery_interval': 1,
+                'vaccine_delivery_start_date': '2021-01-12'}},
+            {'FederalQuantitativeEasing': {
+                # The number of QE levels.
+                'num_QE_levels': 20,
+                # The number of days over which the total subsidy amount is evenly rolled out.
+                'QE_interval': 90,
+                # The maximum annual subsidy that may be allocated per person.
+                'max_annual_QE_per_person': 20
+            }},
         ],
-        "economic_reward_crra_eta": 2,
-        "episode_length": 540,
-        "flatten_masks": True,
-        "flatten_observations": False,
-        "health_priority_scaling_agents": 0.3,
-        "health_priority_scaling_planner": 0.45,
-        "infection_too_sick_to_work_rate": 0.1,
-        "multi_action_mode_agents": False,
-        "multi_action_mode_planner": False,
-        "n_agents": 51,
-        "path_to_data_and_fitted_params": "",
-        "pop_between_age_18_65": 0.6,
-        "risk_free_interest_rate": 0.03,
-        "world_size": [1, 1],
-        "start_date": "2020-03-22",
-        "use_real_world_data": False,
-        "use_real_world_policies": False,
+        'economic_reward_crra_eta': 2,
+        'episode_length': 540,
+        'flatten_masks': True,
+        'flatten_observations': False,
+        'health_priority_scaling_agents': 0.3,
+        'health_priority_scaling_planner': 0.45,
+        'infection_too_sick_to_work_rate': 0.1,
+        'multi_action_mode_agents': False,
+        'multi_action_mode_planner': False,
+        'n_agents': 51,
+        'path_to_data_and_fitted_params': '',
+        'pop_between_age_18_65': 0.6,
+        'risk_free_interest_rate': 0.03,
+        'world_size': [1, 1],
+        'start_date': '2020-03-22',
+        'use_real_world_data': False,
+        'use_real_world_policies': False
     }
+
 }
 
-num_agents = env_configs["test1"]["n_agents"]
-policy_to_agent_ids_mapping = {
+num_agents = env_configs["test1"]["n_agents"] 
+
+policy_tag_to_agent_id_map = {
     "a": [str(agent_id) for agent_id in range(num_agents)],
     "p": ["p"],
+    "f": ["f"]
 }
 
 testing_class = EnvironmentCPUvsGPU(
@@ -93,7 +96,7 @@ testing_class = EnvironmentCPUvsGPU(
     num_episodes=2,
     env_wrapper=FoundationEnvWrapper,
     env_registrar=env_registrar,
-    policy_tag_to_agent_id_map=policy_to_agent_ids_mapping,
+    policy_tag_to_agent_id_map=policy_tag_to_agent_id_map,
     create_separate_placeholders_for_each_policy=True,
     obs_dim_corresponding_to_num_agents="last"
 )
