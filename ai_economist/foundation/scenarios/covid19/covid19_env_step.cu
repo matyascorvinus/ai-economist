@@ -339,9 +339,9 @@ extern "C" {
         float* obs_f_world_agent_QE,
         float* obs_f_world_agent_FED_Balance_Sheet,
         float* FEDBalanceSheet,
-        float MaxFEDBalanceSheet,
+        const float MaxFEDBalanceSheet,
         float* QE,
-        float MaxQE,
+        const float MaxQE,
         float* MoneySupply,
         float CPI,
         float InterestRate,
@@ -563,16 +563,16 @@ extern "C" {
         const int kNumAgents,
         const int kEpisodeLength,
         float* QE,
-        float MaxQE,
+        const float MaxQE,
         float* MoneySupply,
-        float MaxMoneySupply,
+        const float MaxMoneySupply,
         float* FEDBalanceSheet,
-        float MaxFEDBalanceSheet,
+        const float MaxFEDBalanceSheet,
         float* CPI,
         float InterestRate,
         float TreasuryYield,
         float* USDebt,
-        float MaxUSDebt
+        const float MaxUSDebt
     ) {
         const int kEnvId = blockIdx.x;
         const int kAgentId = threadIdx.x;

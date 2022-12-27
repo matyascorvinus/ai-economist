@@ -483,12 +483,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         data_dict.add_data(
             name="MaxQE",
             data=(self.maximum_QE_2019_per_person * self.world.us_population / 365), # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
-            save_copy_and_apply_at_reset=True,
+ 
         )
         data_dict.add_data(
             name="MaxMoneySupply",
-            data=self.money_supply, # Money Supply 2020
-            save_copy_and_apply_at_reset=True,
+            data=self.money_supply # Money Supply 2020 
         )
         data_dict.add_data(
             name="MoneySupply",
@@ -517,8 +516,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         )
         data_dict.add_data(
             name="MaxFEDBalanceSheet",
-            data=(self.maximum_FED_Balance_Sheet_2020 * self.trillion_dollar / 365), # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
-            save_copy_and_apply_at_reset=True,
+            data=(self.maximum_FED_Balance_Sheet_2020 * self.trillion_dollar / 365) # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
+ 
         )
         data_dict.add_data(
             name="USDebt",
@@ -527,8 +526,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         )
         data_dict.add_data(
             name="MaxUSDebt",
-            data=self.us_debt, # US Debt 2020
-            save_copy_and_apply_at_reset=True,
+            data=self.us_debt # US Debt 2020 
         )
         
         data_dict.add_data(
