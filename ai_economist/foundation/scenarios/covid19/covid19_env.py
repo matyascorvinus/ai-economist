@@ -482,7 +482,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         ) 
         data_dict.add_data(
             name="MaxQE",
-            data=(self.maximum_QE_2019_per_person * self.world.us_state_population / 365), # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
+            data=(self.maximum_QE_2019_per_person * self.world.us_population / 365), # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
