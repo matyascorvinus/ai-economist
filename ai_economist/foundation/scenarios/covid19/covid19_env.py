@@ -477,7 +477,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         )
         data_dict.add_data(
             name="QE_level",
-            data=self.world.global_state["QE Level"], # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
+            data=self.world.global_state["QE Level"].astype(self.np_int_dtype), # Quantitative Easing -> Money Printing -> Increasing Money Supply -> Enable Subsidy Payments
             save_copy_and_apply_at_reset=True,
         ) 
         data_dict.add_data(
