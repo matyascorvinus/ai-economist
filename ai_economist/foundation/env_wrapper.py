@@ -377,9 +377,7 @@ class FoundationEnvWrapper:
             self.env.scenario_step()
 
             # Compute rewards
-            self.env.generate_rewards()
-            cpu = torch.device('cpu')
-            self.env.cuda_data_manager._device_data_via_torch.to(cpu)
+            self.env.generate_rewards() 
             result = None  # Do not return anything
         else:
             assert actions is not None, "Please provide actions to step with."
