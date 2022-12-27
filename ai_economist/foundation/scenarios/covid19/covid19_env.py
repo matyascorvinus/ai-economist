@@ -1343,12 +1343,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         )
         
         fraction_between_QE_and_subsidy = (
-            self.world.global_state["Subsidy"][
+            np.sum(self.world.global_state["Subsidy"][
                 self.world.timestep
-            ] / 
-            self.world.global_state["QE"][
+            ]) / np.sum(self.world.global_state["QE"][
                 self.world.timestep
-            ]
+            ])
         ) 
         
         final_interest_rate = (self.risk_free_interest_rate + self.world.global_state["Interest Rate"][self.world.timestep]) * fraction_between_QE_and_subsidy
