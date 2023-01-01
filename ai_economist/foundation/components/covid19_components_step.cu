@@ -35,7 +35,7 @@ extern "C" {
 
         assert(env_timestep_arr[kEnvId] > 0 &&
             env_timestep_arr[kEnvId] <= kEpisodeLength);
-        assert (kAgentId <= kNumAgents- 2);
+        assert (kAgentId <= kNumAgents- 1);
 
         // Update the stringency levels for the US states
         if (kAgentId < (kNumAgents- 2)) {
@@ -135,7 +135,7 @@ extern "C" {
 
         assert(env_timestep_arr[kEnvId] > 0 &&
             env_timestep_arr[kEnvId] <= kEpisodeLength);
-        assert (kAgentId <= kNumAgents- 2);
+        assert (kAgentId <= kNumAgents- 1);
 
         int t_since_last_subsidy = env_timestep_arr[kEnvId] %
             kSubsidyInterval;
@@ -226,7 +226,7 @@ extern "C" {
         assert(env_timestep_arr[kEnvId] > 0 && env_timestep_arr[kEnvId] <=
             kEpisodeLength);
         assert(kTimeWhenVaccineDeliveryBegins > 0);
-        assert (kAgentId <= kNumAgents- 2);
+        assert (kAgentId <= kNumAgents- 1);
 
         // CUDA version of generate observations()
         int t_first_delivery = kTimeWhenVaccineDeliveryBegins +
