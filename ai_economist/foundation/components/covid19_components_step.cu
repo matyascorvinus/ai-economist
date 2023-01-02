@@ -132,7 +132,7 @@ extern "C" {
     ) {
         const int kEnvId = blockIdx.x;
         const int kAgentId = threadIdx.x;
-
+        
         assert(env_timestep_arr[kEnvId] > 0 &&
             env_timestep_arr[kEnvId] <= kEpisodeLength);
         assert (kAgentId <= kNumAgents- 1);

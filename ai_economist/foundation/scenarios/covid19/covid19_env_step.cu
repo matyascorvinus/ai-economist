@@ -345,7 +345,6 @@
         ) {
             const int kEnvId = blockIdx.x;
             const int kAgentId = threadIdx.x;
-
             assert(env_timestep_arr[kEnvId] > 0 &&
                 env_timestep_arr[kEnvId] <= kEpisodeLength);
             assert (kAgentId <= kNumAgents - 1);
@@ -520,7 +519,7 @@
             float* rewards_f,
             const int kNumDaysInAnYear,
             const int kValueOfLife,
-            const float kRiskFreeInterestRate,
+            // const float kRiskFreeInterestRate,
             const float kEconomicRewardCrraEta,
             const float* kMinMarginalAgentHealthIndex,
             const float* kMaxMarginalAgentHealthIndex,

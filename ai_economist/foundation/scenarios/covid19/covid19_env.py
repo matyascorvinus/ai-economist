@@ -504,11 +504,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         #     data=self.world.global_state["Treasury Yield"],  # Treasury Yield
         #     save_copy_and_apply_at_reset=True,
         # )
-        data_dict.add_data(
-            name="CPI",
-            data=self.world.global_state["CPI"], # Consumer Price Index
-            save_copy_and_apply_at_reset=True,
-        )
+        # data_dict.add_data(
+        #     name="CPI",
+        #     data=self.world.global_state["CPI"], # Consumer Price Index
+        #     save_copy_and_apply_at_reset=True,
+        # )
         data_dict.add_data(
             name="FEDBalanceSheet",
             data=self.world.global_state["FED Balance Sheet"], # FED Balance Sheet
@@ -962,7 +962,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             daily_MoneySupply = self.world.global_state["Money Supply"][curr_t]
             # daily_InterestRate = self.world.global_state["Interest Rate"][curr_t]
             # daily_TreasuryYield = self.world.global_state["Treasury Yield"][curr_t]
-            daily_CPI = self.world.global_state["CPI"][curr_t]
+            # daily_CPI = self.world.global_state["CPI"][curr_t]
             daily_FEDBalanceSheet = self.world.global_state["FED Balance Sheet"][curr_t]
             daily_USDebt = self.world.global_state["US Debt"][curr_t]
              
