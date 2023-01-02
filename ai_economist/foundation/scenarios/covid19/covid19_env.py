@@ -494,16 +494,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             data=self.world.global_state["Money Supply"], # Money Supply
             save_copy_and_apply_at_reset=True,
         )
-        data_dict.add_data(
-            name="InterestRate",
-            data=self.world.global_state["Interest Rate"],  # Interest Rate
-            save_copy_and_apply_at_reset=True,
-        )
-        data_dict.add_data(
-            name="TreasuryYield",
-            data=self.world.global_state["Treasury Yield"],  # Treasury Yield
-            save_copy_and_apply_at_reset=True,
-        )
+        # data_dict.add_data(
+        #     name="InterestRate",
+        #     data=self.world.global_state["Interest Rate"],  # Interest Rate
+        #     save_copy_and_apply_at_reset=True,
+        # )
+        # data_dict.add_data(
+        #     name="TreasuryYield",
+        #     data=self.world.global_state["Treasury Yield"],  # Treasury Yield
+        #     save_copy_and_apply_at_reset=True,
+        # )
         data_dict.add_data(
             name="CPI",
             data=self.world.global_state["CPI"], # Consumer Price Index
@@ -703,14 +703,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             name="num_days_in_an_year",
             data=self.num_days_in_an_year,
         )
-        data_dict.add_data(
-            name="risk_free_interest_rate",
-            data=self.risk_free_interest_rate,
-        )
-        data_dict.add_data(
-            name="us_treasury_yields_10_years",
-            data=self.us_treasury_yields_10_years,
-        )
+        # data_dict.add_data(
+        #     name="risk_free_interest_rate",
+        #     data=self.risk_free_interest_rate,
+        # )
+        # data_dict.add_data(
+        #     name="us_treasury_yields_10_years",
+        #     data=self.us_treasury_yields_10_years,
+        # )
         data_dict.add_data(
             name="fed_interest_rate",
             data=self.fed_interest_rate,
@@ -774,9 +774,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("MaxQE"), 
                 self.cuda_data_manager.device_data("MoneySupply"), 
                 self.cuda_data_manager.device_data("MaxMoneySupply"), 
-                self.cuda_data_manager.device_data("InterestRate"), 
-                self.cuda_data_manager.device_data("TreasuryYield" ), 
-                self.cuda_data_manager.device_data("CPI"), 
+                # self.cuda_data_manager.device_data("InterestRate"), 
+                # self.cuda_data_manager.device_data("TreasuryYield" ), 
+                # self.cuda_data_manager.device_data("CPI"), 
                 self.cuda_data_manager.device_data("FEDBalanceSheet"), 
                 self.cuda_data_manager.device_data("MaxFEDBalanceSheet"), 
                 self.cuda_data_manager.device_data("USDebt"), 
@@ -1185,8 +1185,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data(f"{_REWARDS}_f"),
                 self.cuda_data_manager.device_data("num_days_in_an_year"),
                 self.cuda_data_manager.device_data("value_of_life"),
-                self.cuda_data_manager.device_data("risk_free_interest_rate"),
-                self.cuda_data_manager.device_data("us_treasury_yields_10_years"),
+                # self.cuda_data_manager.device_data("risk_free_interest_rate"),
+                # self.cuda_data_manager.device_data("us_treasury_yields_10_years"),
                 self.cuda_data_manager.device_data("fed_interest_rate"),
                 self.cuda_data_manager.device_data("economic_reward_crra_eta"),
                 self.cuda_data_manager.device_data("min_marginal_agent_health_index"),
@@ -1229,9 +1229,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("MaxQE"), 
                 self.cuda_data_manager.device_data("MoneySupply"), 
                 self.cuda_data_manager.device_data("MaxMoneySupply"), 
-                self.cuda_data_manager.device_data("InterestRate"), 
-                self.cuda_data_manager.device_data("TreasuryYield" ), 
-                self.cuda_data_manager.device_data("CPI"), 
+                # self.cuda_data_manager.device_data("InterestRate"), 
+                # self.cuda_data_manager.device_data("TreasuryYield" ), 
+                # self.cuda_data_manager.device_data("CPI"), 
                 self.cuda_data_manager.device_data("FEDBalanceSheet"), 
                 self.cuda_data_manager.device_data("MaxFEDBalanceSheet"), 
                 self.cuda_data_manager.device_data("USDebt"), 
@@ -1350,9 +1350,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             ])
         ) 
         
-        final_interest_rate = (self.risk_free_interest_rate + self.world.global_state["Interest Rate"][self.world.timestep]) * fraction_between_QE_and_subsidy
+        # final_interest_rate = (self.risk_free_interest_rate + self.world.global_state["Interest Rate"][self.world.timestep]) * fraction_between_QE_and_subsidy
+        # + self.us_treasury_yields_10_years * ( 1 - fraction_between_QE_and_subsidy )
+        final_interest_rate = (self.risk_free_interest_rate + self.fed_interest_rate) * fraction_between_QE_and_subsidy
         + self.us_treasury_yields_10_years * ( 1 - fraction_between_QE_and_subsidy )
-        
         # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
         cost_of_subsidy_t = (1 + np.average(final_interest_rate)) * np.sum(subsidy_t)
         
@@ -1465,10 +1466,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.set_global_state("Money Supply", dtype=self.np_float_dtype)
         self.set_global_state("QE", dtype=self.np_float_dtype) 
         self.set_global_state("US Debt", self.us_debt, dtype=self.np_float_dtype)
-        self.set_global_state("CPI", self.us_cpi, dtype=self.np_float_dtype) 
+        # self.set_global_state("CPI", self.us_cpi, dtype=self.np_float_dtype) 
         self.set_global_state("FED Balance Sheet", self.federal_reserve_balance_sheet, dtype=self.np_float_dtype)
-        self.set_global_state("Treasury Yield", self.us_treasury_yields_10_years, dtype=self.np_float_dtype)
-        self.set_global_state("Interest Rate", self.fed_interest_rate, dtype=self.np_float_dtype)
+        # self.set_global_state("Treasury Yield", self.us_treasury_yields_10_years, dtype=self.np_float_dtype)
+        # self.set_global_state("Interest Rate", self.fed_interest_rate, dtype=self.np_float_dtype)
         
         # Set initial agent states
         # ------------------------

@@ -338,9 +338,9 @@
             float* QE,
             const float MaxQE,
             float* MoneySupply,
-            float CPI,
-            float InterestRate,
-            float TreasuryYield,
+            // float CPI,
+            // float InterestRate,
+            // float TreasuryYield,
             float* USDebt
         ) {
             const int kEnvId = blockIdx.x;
@@ -551,9 +551,9 @@
             const float MaxMoneySupply,
             float* FEDBalanceSheet,
             const float MaxFEDBalanceSheet,
-            float* CPI,
-            float InterestRate,
-            float TreasuryYield,
+            // float* CPI,
+            // float InterestRate,
+            // float TreasuryYield,
             float* USDebt,
             const float MaxUSDebt
         ) {
@@ -644,6 +644,7 @@
                 } 
                 float fraction_between_QE_and_subsidy = (total_subsidy / total_QE) ;
                 float risk_free_interest_rate = 0.025;
+                float TreasuryYield = 0.1;
                 float final_interest_rate = risk_free_interest_rate
                 * fraction_between_QE_and_subsidy
                     + TreasuryYield * ( 1 - fraction_between_QE_and_subsidy );
@@ -692,7 +693,8 @@
                     total_US_Debt += USDebt[kArrayIndexOffset +
                         env_timestep_arr[kEnvId] * (kNumAgents - 2) + ag_id];
                 }
-
+                
+                float InterestRate = 0.5;
                 rewards_f[kEnvId] = get_weighted_average_federal_reserve(
                     total_Money_Supply,
                     MaxMoneySupply * trillion_dollar,
