@@ -667,7 +667,7 @@
                     marginal_planner_economic_index);
             } 
             // Federal Reserve
-            else {
+            else if (kAgentId == kNumAgents - 1) {
                 
                 float total_QE = 0.0;
                 float total_Money_Supply = 0.0;
