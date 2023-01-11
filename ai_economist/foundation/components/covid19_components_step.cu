@@ -129,7 +129,7 @@ extern "C" {
         int * env_timestep_arr,
         const int kNumAgents,
         const int kEpisodeLength,
-        float * USDebt,
+        float * USDebt
     ) {
         const int kEnvId = blockIdx.x;
         const int kAgentId = threadIdx.x;

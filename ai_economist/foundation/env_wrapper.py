@@ -104,6 +104,7 @@ class FoundationEnvWrapper:
         env_registrar=None,
         event_messenger=None,
         process_id=0,
+        blocks_per_env=1
     ):
         """
         'env_obj': an environment object
@@ -133,6 +134,7 @@ class FoundationEnvWrapper:
 
         self.n_agents = self.env.num_agents
         self.episode_length = self.env.episode_length
+        self.blocks_per_env = blocks_per_env
 
         assert self.env.name
         self.name = self.env.name
@@ -220,6 +222,7 @@ class FoundationEnvWrapper:
                 num_agents=self.n_agents,
                 episode_length=self.episode_length,
                 num_envs=self.n_envs,
+                blocks_per_env=self.blocks_per_env
             )
 
             logging.info("Initializing the CUDA function manager...")
