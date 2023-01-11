@@ -711,10 +711,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         #     name="us_treasury_yields_10_years",
         #     data=self.us_treasury_yields_10_years,
         # )
-        data_dict.add_data(
-            name="fed_interest_rate",
-            data=self.fed_interest_rate,
-        )
+        # data_dict.add_data(
+        #     name="fed_interest_rate",
+        #     data=self.fed_interest_rate,
+        # )
         data_dict.add_data(
             name="agents_health_norm",
             data=self.agents_health_norm,
@@ -765,22 +765,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("num_stringency_levels"),
                 self.cuda_data_manager.device_data("postsubsidy_productivity"),
                 self.cuda_data_manager.device_data("num_vaccines_available_t"),
-                self.cuda_data_manager.device_data(
-                    "real_world_stringency_policy_history"
-                ),
-                
-                # Federal Reserve-related
+                self.cuda_data_manager.device_data("real_world_stringency_policy_history"), 
                 self.cuda_data_manager.device_data("QE"),  
                 self.cuda_data_manager.device_data("MaxQE"), 
                 self.cuda_data_manager.device_data("MoneySupply"), 
                 self.cuda_data_manager.device_data("MaxMoneySupply"), 
-                # self.cuda_data_manager.device_data("InterestRate"), 
-                # self.cuda_data_manager.device_data("TreasuryYield" ), 
-                # self.cuda_data_manager.device_data("CPI"), 
                 self.cuda_data_manager.device_data("FEDBalanceSheet"), 
                 self.cuda_data_manager.device_data("MaxFEDBalanceSheet"), 
                 self.cuda_data_manager.device_data("USDebt"), 
-                                
                 self.cuda_data_manager.device_data("beta_delay"),
                 self.cuda_data_manager.device_data("beta_slopes"),
                 self.cuda_data_manager.device_data("beta_intercepts"),
@@ -796,41 +788,23 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("filter_len"),
                 self.cuda_data_manager.device_data("num_filters"),
                 self.cuda_data_manager.device_data("delta_stringency_level"),
-                self.cuda_data_manager.device_data(
-                    "grouped_convolutional_filter_weights"
-                ),
+                self.cuda_data_manager.device_data("grouped_convolutional_filter_weights"),
                 self.cuda_data_manager.device_data("unemp_conv_filters"),
                 self.cuda_data_manager.device_data("unemployment_bias"),
                 self.cuda_data_manager.device_data("signal"),
                 self.cuda_data_manager.device_data("daily_production_per_worker"),
                 self.cuda_data_manager.device_data("maximum_productivity"),
-                self.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_a_world-agent_state"
-                ),
-                self.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_a_world-agent_postsubsidy_productivity"
-                ),
-                self.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_a_world-lagged_stringency_level"
-                ),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_a_world-agent_state"),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_a_world-agent_postsubsidy_productivity"),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_a_world-lagged_stringency_level"),
                 self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_a_time"),
-                self.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_p_world-agent_state"
-                ),
-                self.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_p_world-agent_postsubsidy_productivity"
-                ),
-                self.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_p_world-lagged_stringency_level"
-                ),
-                self.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_f_world-agent_state"
-                ),
-                self.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_f_world-agent_FED_Balance_Sheet"
-                ),
-                
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_p_world-agent_state"),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_p_world-agent_postsubsidy_productivity"),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_p_world-lagged_stringency_level"),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_f_world-agent_state"),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_f_world-agent_FED_Balance_Sheet"),
                 self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_p_time"),
+                self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_f_time"),
                 self.cuda_data_manager.device_data("_timestep_"),
                 self.cuda_data_manager.meta_info("n_agents"),
                 self.cuda_data_manager.meta_info("episode_length"),
@@ -1185,9 +1159,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data(f"{_REWARDS}_f"),
                 self.cuda_data_manager.device_data("num_days_in_an_year"),
                 self.cuda_data_manager.device_data("value_of_life"),
-                # self.cuda_data_manager.device_data("risk_free_interest_rate"),
-                # self.cuda_data_manager.device_data("us_treasury_yields_10_years"),
-                self.cuda_data_manager.device_data("fed_interest_rate"),
+                # self.cuda_data_manager.device_data("fed_interest_rate"),
                 self.cuda_data_manager.device_data("economic_reward_crra_eta"),
                 self.cuda_data_manager.device_data("min_marginal_agent_health_index"),
                 self.cuda_data_manager.device_data("max_marginal_agent_health_index"),
@@ -1195,24 +1167,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("max_marginal_agent_economic_index"),
                 self.cuda_data_manager.device_data("min_marginal_planner_health_index"),
                 self.cuda_data_manager.device_data("max_marginal_planner_health_index"),
-                self.cuda_data_manager.device_data(
-                    "min_marginal_planner_economic_index"
-                ),
-                self.cuda_data_manager.device_data(
-                    "max_marginal_planner_economic_index"
-                ),
-                self.cuda_data_manager.device_data(
-                    "weightage_on_marginal_agent_health_index"
-                ),
-                self.cuda_data_manager.device_data(
-                    "weightage_on_marginal_agent_economic_index"
-                ),
-                self.cuda_data_manager.device_data(
-                    "weightage_on_marginal_planner_health_index"
-                ),
-                self.cuda_data_manager.device_data(
-                    "weightage_on_marginal_planner_economic_index"
-                ),
+                self.cuda_data_manager.device_data("min_marginal_planner_economic_index"),
+                self.cuda_data_manager.device_data("max_marginal_planner_economic_index"),
+                self.cuda_data_manager.device_data("weightage_on_marginal_agent_health_index"),
+                self.cuda_data_manager.device_data("weightage_on_marginal_agent_economic_index"),
+                self.cuda_data_manager.device_data("weightage_on_marginal_planner_health_index"),
+                self.cuda_data_manager.device_data("weightage_on_marginal_planner_economic_index"),
                 self.cuda_data_manager.device_data("agents_health_norm"),
                 self.cuda_data_manager.device_data("agents_economic_norm"),
                 self.cuda_data_manager.device_data("planner_health_norm"),
@@ -1224,19 +1184,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("_timestep_"),
                 self.cuda_data_manager.meta_info("n_agents"),
                 self.cuda_data_manager.meta_info("episode_length"),
-                
                 self.cuda_data_manager.device_data("QE"),  
                 self.cuda_data_manager.device_data("MaxQE"), 
                 self.cuda_data_manager.device_data("MoneySupply"), 
-                self.cuda_data_manager.device_data("MaxMoneySupply"), 
-                # self.cuda_data_manager.device_data("InterestRate"), 
-                # self.cuda_data_manager.device_data("TreasuryYield" ), 
-                # self.cuda_data_manager.device_data("CPI"), 
+                self.cuda_data_manager.device_data("MaxMoneySupply"),  
                 self.cuda_data_manager.device_data("FEDBalanceSheet"), 
                 self.cuda_data_manager.device_data("MaxFEDBalanceSheet"), 
                 self.cuda_data_manager.device_data("USDebt"), 
                 self.cuda_data_manager.device_data("MaxUSDebt"), 
-                
                 block=self.world.cuda_function_manager.block,
                 grid=self.world.cuda_function_manager.grid,
             )
@@ -1462,7 +1417,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.set_global_state("Subsidy", dtype=self.np_float_dtype)
         self.set_global_state("Postsubsidy Productivity", dtype=self.np_float_dtype)
          
-        self.set_global_state("QE Level", dtype=self.np_float_dtype)
+        self.set_global_state("QE Level", dtype=self.np_int_dtype)
         self.set_global_state("Money Supply", dtype=self.np_float_dtype)
         self.set_global_state("QE", dtype=self.np_float_dtype) 
         self.set_global_state("US Debt", self.us_debt, dtype=self.np_float_dtype)

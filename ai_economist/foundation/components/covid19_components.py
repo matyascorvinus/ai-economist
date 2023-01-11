@@ -387,6 +387,7 @@ class FederalGovernmentSubsidy(BaseComponent):
                 self.world.cuda_data_manager.device_data("_timestep_"),
                 self.world.cuda_data_manager.meta_info("n_agents"),
                 self.world.cuda_data_manager.meta_info("episode_length"),
+                self.world.cuda_data_manager.device_data("USDebt"),
                 block=self.world.cuda_function_manager.block,
                 grid=self.world.cuda_function_manager.grid,
             )

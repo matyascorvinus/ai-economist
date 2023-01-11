@@ -328,19 +328,18 @@
             float* obs_p_world_agent_postsubsidy_productivity,
             float* obs_p_world_lagged_stringency_level,
             float* obs_p_time,
+            float* obs_f_time,
             int * env_timestep_arr,
             const int kNumAgents,
             const int kEpisodeLength,
-            float* obs_f_world_agent_QE,
+            float* obs_f_world_agent,
             float* obs_f_world_agent_FED_Balance_Sheet,
             float* FEDBalanceSheet,
             const float MaxFEDBalanceSheet,
             float* QE,
             const float MaxQE,
-            float* MoneySupply,
-            // float CPI,
-            // float InterestRate,
-            // float TreasuryYield,
+            const float MaxMoneySupply,
+            float* MoneySupply, 
             float* USDebt
         ) {
             const int kEnvId = blockIdx.x;
@@ -470,7 +469,7 @@
                 
             // Federal Reserve
             
-                obs_f_world_agent_QE[
+                obs_f_world_agent[
                     kTimeIndependentArrayIdx
                 ] = QE[kArrayIdxCurrentTime] /
                     MaxQE;
@@ -519,7 +518,6 @@
             float* rewards_f,
             const int kNumDaysInAnYear,
             const int kValueOfLife,
-            // const float kRiskFreeInterestRate,
             const float kEconomicRewardCrraEta,
             const float* kMinMarginalAgentHealthIndex,
             const float* kMaxMarginalAgentHealthIndex,
@@ -549,10 +547,7 @@
             float* MoneySupply,
             const float MaxMoneySupply,
             float* FEDBalanceSheet,
-            const float MaxFEDBalanceSheet,
-            // float* CPI,
-            // float InterestRate,
-            // float TreasuryYield,
+            const float MaxFEDBalanceSheet, 
             float* USDebt,
             const float MaxUSDebt
         ) {

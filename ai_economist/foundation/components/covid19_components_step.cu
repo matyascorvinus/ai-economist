@@ -128,7 +128,8 @@ extern "C" {
         float * obs_p_action_mask,
         int * env_timestep_arr,
         const int kNumAgents,
-        const int kEpisodeLength
+        const int kEpisodeLength,
+        float * USDebt,
     ) {
         const int kEnvId = blockIdx.x;
         const int kAgentId = threadIdx.x;
@@ -167,6 +168,9 @@ extern "C" {
             // Setting the subsidies for the US states
             // based on the federal government's subsidy level
             subsidy[time_dependent_array_index_curr_t] =
+                subsidy_level[time_dependent_array_index_curr_t] *
+                KMaxDailySubsidyPerState[kAgentId] / kNumSubsidyLevels;
+            USDebt[time_dependent_array_index_curr_t] =
                 subsidy_level[time_dependent_array_index_curr_t] *
                 KMaxDailySubsidyPerState[kAgentId] / kNumSubsidyLevels;
 

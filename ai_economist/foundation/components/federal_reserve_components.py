@@ -336,21 +336,11 @@ class FederalQuantitativeEasing(BaseComponent):
                 self.world.cuda_data_manager.device_data("default_federal_reserve_action_mask"),
                 self.world.cuda_data_manager.device_data("no_op_federal_reserve_action_mask"),
                 self.world.cuda_data_manager.device_data(f"{_ACTIONS}_f"),
-                self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_a_{self.name}-t_until_next_QE"
-                ),
-                self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_a_{self.name}-current_QE_level"
-                ),
-                self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_f_{self.name}-t_until_next_QE"
-                ),
-                self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_f_{self.name}-current_QE_level"
-                ),
-                self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_f_action_mask"
-                ),
+                self.world.cuda_data_manager.device_data(f"{_OBSERVATIONS}_a_{self.name}-t_until_next_QE"),
+                self.world.cuda_data_manager.device_data(f"{_OBSERVATIONS}_a_{self.name}-current_QE_level"),
+                self.world.cuda_data_manager.device_data(f"{_OBSERVATIONS}_f_{self.name}-t_until_next_QE"),
+                self.world.cuda_data_manager.device_data(f"{_OBSERVATIONS}_f_{self.name}-current_QE_level"),
+                self.world.cuda_data_manager.device_data(f"{_OBSERVATIONS}_f_action_mask"),
                 self.world.cuda_data_manager.device_data("_timestep_"),
                 self.world.cuda_data_manager.meta_info("n_agents"),
                 self.world.cuda_data_manager.meta_info("episode_length"),
