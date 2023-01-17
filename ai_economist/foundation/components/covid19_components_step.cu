@@ -83,7 +83,7 @@ extern "C" {
                 action_id++) {
                 int action_mask_array_index =
                     kEnvId * (kNumStringencyLevels + 1) *
-                    (kNumAgents- 2) + action_id * (kNumAgents- 2) + kAgentId;
+                    (kNumAgents - 2) + action_id * (kNumAgents - 2) + kAgentId;
                 if (env_timestep_arr[kEnvId] < action_in_cooldown_until[
                     time_independent_array_index]
                 ) {
