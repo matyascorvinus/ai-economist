@@ -586,7 +586,7 @@ extern "C" {
                     postsubsidy_productivity[kArrayIndexOffset +
                     env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
             }
-            total_postsubsidy_productivity = total_postsubsidy_productivity - 0.2 * total_quantitative
+            total_postsubsidy_productivity = total_postsubsidy_productivity - 0.2 * total_quantitative;
             float cost_of_subsidy = (1 + kRiskFreeInterestRate) *
                 total_quantitative + (total_subsidy - total_quantitative) * (1.05);
             float marginal_planner_economic_index = crra_nonlinearity(

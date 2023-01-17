@@ -515,8 +515,8 @@ class FederalReserveComponent(BaseComponent):
 
         super().__init__(*base_component_args, **base_component_kwargs)
 
-        self.default_planner_action_mask = [1 for _ in range(self.num_quantitative_levels)]
-        self.no_op_planner_action_mask = [0 for _ in range(self.num_quantitative_levels)]
+        self.default_quantitative_planner_action_mask = [1 for _ in range(self.num_quantitative_levels)]
+        self.no_op_quantitative_planner_action_mask = [0 for _ in range(self.num_quantitative_levels)]
 
         # (This will be overwritten during reset; see below)
         self.max_daily_quantitative_per_state = np.array(
@@ -544,12 +544,12 @@ class FederalReserveComponent(BaseComponent):
     def generate_masks(self, completions=0):
         masks = {}
         if self.world.use_real_world_policies:
-            masks[self.world.planner.idx] = self.default_planner_action_mask
+            masks[self.world.planner.idx] = self.default_quantitative_planner_action_mask
         else:
             if self.world.timestep % self.quantitative_interval == 0:
-                masks[self.world.planner.idx] = self.default_planner_action_mask
+                masks[self.world.planner.idx] = self.default_quantitative_planner_action_mask
             else:
-                masks[self.world.planner.idx] = self.no_op_planner_action_mask
+                masks[self.world.planner.idx] = self.no_op_quantitative_planner_action_mask
         return masks
 
     def get_data_dictionary(self):
@@ -570,12 +570,12 @@ class FederalReserveComponent(BaseComponent):
             data=self.max_daily_quantitative_per_state,
         )
         data_dict.add_data(
-            name="default_planner_action_mask",
-            data=[1] + self.default_planner_action_mask,
+            name="default_quantitative_planner_action_mask",
+            data=[1] + self.default_quantitative_planner_action_mask,
         )
         data_dict.add_data(
-            name="no_op_planner_action_mask",
-            data=[1] + self.no_op_planner_action_mask,
+            name="no_op_quantitative_planner_action_mask",
+            data=[1] + self.no_op_quantitative_planner_action_mask,
         )
         return data_dict
 
@@ -594,8 +594,8 @@ class FederalReserveComponent(BaseComponent):
                 self.world.cuda_data_manager.device_data("quantitative_interval"),
                 self.world.cuda_data_manager.device_data("num_quantitative_levels"),
                 self.world.cuda_data_manager.device_data("max_daily_quantitative_per_state"),
-                self.world.cuda_data_manager.device_data("default_planner_action_mask"),
-                self.world.cuda_data_manager.device_data("no_op_planner_action_mask"),
+                self.world.cuda_data_manager.device_data("default_quantitative_planner_action_mask"),
+                self.world.cuda_data_manager.device_data("no_op_quantitative_planner_action_mask"),
                 self.world.cuda_data_manager.device_data(f"{_ACTIONS}_p"),
                 self.world.cuda_data_manager.device_data(
                     f"{_OBSERVATIONS}_a_{self.name}-t_until_next_quantitative"

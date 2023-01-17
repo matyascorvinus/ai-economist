@@ -965,9 +965,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Productivity
         postsubsidy_productivity_t = self.world.global_state[
             "Postsubsidy Productivity"
-        ][self.world.timestep] - 0.2 * self.world.global_state[
-            "Total Quantitative"
-        ][self.world.timestep] # replace 0.2 by np.random.randint(4, size = 1) / 20 when we found a good cuda solution
+        ][self.world.timestep]
         
         normalized_postsubsidy_productivity_t = (
             postsubsidy_productivity_t / self.maximum_productivity_t
@@ -1100,7 +1098,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         quantitative_t = self.world.global_state["Quantitative"][self.world.timestep]
         postsubsidy_productivity_t = self.world.global_state[
             "Postsubsidy Productivity"
-        ][self.world.timestep]
+        ][self.world.timestep]  - 0.2 * self.world.global_state[
+            "Total Quantitative"
+        ][self.world.timestep] # replace 0.2 by np.random.randint(4, size = 1) / 20 when we found a good cuda solution
 
         # Health index -- the cost equivalent (annual GDP) of covid deaths
         # Note: casting deaths to float to prevent overflow issues

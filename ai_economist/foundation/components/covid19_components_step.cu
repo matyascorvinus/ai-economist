@@ -264,9 +264,9 @@ extern "C" {
             // based on the federal government's quantitative level
             float quantitative_level_frac = 0.0;
             if(quantitative_level[time_dependent_array_index_curr_t] < kNumQuantitativeLevels - 10) {
-                quantitative_level_frac = (quantitative_level[time_dependent_array_index_curr_t] - 10) / kNumQuantitativeLevels
+                quantitative_level_frac = (quantitative_level[time_dependent_array_index_curr_t] - 10) / kNumQuantitativeLevels;
             } else {
-                quantitative_level_frac = (quantitative_level[time_dependent_array_index_curr_t]) / (kNumQuantitativeLevels)
+                quantitative_level_frac = (quantitative_level[time_dependent_array_index_curr_t]) / (kNumQuantitativeLevels);
             }
             quantitative[time_dependent_array_index_curr_t] =
                 quantitative_level_frac * KMaxDailyQuantitativePerState[kAgentId] ;
