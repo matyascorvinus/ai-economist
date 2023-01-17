@@ -352,10 +352,10 @@
             if (kAgentId < (kNumAgents - 1)) {
                 // Indices for time-dependent and time-independent arrays
                 // Time dependent arrays have shapes (num_envs,
-                // kEpisodeLength + 1, kNumAgents - 1)
-                // Time independent arrays have shapes (num_envs, kNumAgents - 1)
+                // kEpisodeLength + 1, kNumAgents - 2)
+                // Time independent arrays have shapes (num_envs, kNumAgents - 2)
                 const int kArrayIndexOffset = kEnvId * (kEpisodeLength + 1) *
-                    (kNumAgents - 1);
+                    (kNumAgents - 2);
                 int kArrayIdxCurrentTime = kArrayIndexOffset +
                     env_timestep_arr[kEnvId] * (kNumAgents - 1) + kAgentId;
                 int kArrayIdxPrevTime = kArrayIndexOffset +
@@ -429,28 +429,28 @@
                 // CUDA version of generate observations
                 // Agents' observations
                 int kFeatureArrayIndexOffset = kEnvId * kNumFeatures *
-                    (kNumAgents - 1) + kAgentId;
+                    (kNumAgents - 2) + kAgentId;
                 obs_a_world_agent_state[
-                    kFeatureArrayIndexOffset + 0 * (kNumAgents - 1)
+                    kFeatureArrayIndexOffset + 0 * (kNumAgents - 2)
                 ] = susceptible[kArrayIdxCurrentTime] / kStatePopulation;
                 obs_a_world_agent_state[
-                    kFeatureArrayIndexOffset + 1 * (kNumAgents - 1)
+                    kFeatureArrayIndexOffset + 1 * (kNumAgents - 2)
                 ] = infected[kArrayIdxCurrentTime] / kStatePopulation;
                 obs_a_world_agent_state[
-                    kFeatureArrayIndexOffset + 2 * (kNumAgents - 1)
+                    kFeatureArrayIndexOffset + 2 * (kNumAgents - 2)
                 ] = recovered[kArrayIdxCurrentTime] / kStatePopulation;
                 obs_a_world_agent_state[
-                    kFeatureArrayIndexOffset + 3 * (kNumAgents - 1)
+                    kFeatureArrayIndexOffset + 3 * (kNumAgents - 2)
                 ] = deaths[kArrayIdxCurrentTime] / kStatePopulation;
                 obs_a_world_agent_state[
-                    kFeatureArrayIndexOffset + 4 * (kNumAgents - 1)
+                    kFeatureArrayIndexOffset + 4 * (kNumAgents - 2)
                 ] = vaccinated[kArrayIdxCurrentTime] / kStatePopulation;
                 obs_a_world_agent_state[
-                    kFeatureArrayIndexOffset + 5 * (kNumAgents - 1)
+                    kFeatureArrayIndexOffset + 5 * (kNumAgents - 2)
                 ] = unemployed[kArrayIdxCurrentTime] / kStatePopulation;
 
                 for (int feature_id = 0; feature_id < kNumFeatures; feature_id ++) {
-                    const int kIndex = feature_id * (kNumAgents - 1);
+                    const int kIndex = feature_id * (kNumAgents - 2);
                     obs_p_world_agent_state[kFeatureArrayIndexOffset +
                         kIndex
                     ] = obs_a_world_agent_state[kFeatureArrayIndexOffset +
@@ -484,14 +484,14 @@
                     obs_a_world_lagged_stringency_level[
                         kTimeIndependentArrayIdx
                     ] = kRealWorldStringencyPolicyHistory[
-                            env_timestep_arr[kEnvId] * (kNumAgents - 1) + kAgentId
+                            env_timestep_arr[kEnvId] * (kNumAgents - 2) + kAgentId
                         ] / static_cast<float>(kNumStringencyLevels);
                 } else {
                     obs_a_world_lagged_stringency_level[
                         kTimeIndependentArrayIdx
                     ] = stringency_level[
                             kArrayIndexOffset +
-                            t_beta * (kNumAgents - 1) +
+                            t_beta * (kNumAgents - 2) +
                             kAgentId
                         ] / static_cast<float>(kNumStringencyLevels);
                 }
@@ -504,8 +504,11 @@
                 // static_cast<float>(env_timestep_arr[kEnvId])
                 obs_a_time[kTimeIndependentArrayIdx] =
                     env_timestep_arr[kEnvId] / static_cast<float>(kEpisodeLength);
-            } else if (kAgentId == kNumAgents - 1) {
+            } else if (kAgentId == kNumAgents - 2) {
                 obs_p_time[kEnvId] = env_timestep_arr[kEnvId] /
+                static_cast<float>(kEpisodeLength);
+            } else if (kAgentId == kNumAgents - 1) {
+                obs_f_time[kEnvId] = env_timestep_arr[kEnvId] /
                 static_cast<float>(kEpisodeLength);
             }
         }
@@ -605,12 +608,12 @@
             } else if (kAgentId == kNumAgents - 2) {
                 // Planner's rewards
                 float total_marginal_deaths = 0;
-                for (int ag_id = 0; ag_id < (kNumAgents - 1); ag_id ++) {
+                for (int ag_id = 0; ag_id < (kNumAgents - 2); ag_id ++) {
                     total_marginal_deaths += (
                         deaths[kArrayIndexOffset + env_timestep_arr[kEnvId] *
-                            (kNumAgents - 1) + ag_id] -
+                            (kNumAgents - 2) + ag_id] -
                         deaths[kArrayIndexOffset + (env_timestep_arr[kEnvId] - 1) *
-                            (kNumAgents - 1) + ag_id]);
+                            (kNumAgents - 2) + ag_id]);
                 }
                 // Note: changing the order of operations to prevent overflow
                 float marginal_planner_health_index = -total_marginal_deaths /

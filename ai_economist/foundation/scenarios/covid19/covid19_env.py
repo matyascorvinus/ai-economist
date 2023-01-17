@@ -1159,7 +1159,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data(f"{_REWARDS}_f"),
                 self.cuda_data_manager.device_data("num_days_in_an_year"),
                 self.cuda_data_manager.device_data("value_of_life"),
-                # self.cuda_data_manager.device_data("fed_interest_rate"),
                 self.cuda_data_manager.device_data("economic_reward_crra_eta"),
                 self.cuda_data_manager.device_data("min_marginal_agent_health_index"),
                 self.cuda_data_manager.device_data("max_marginal_agent_health_index"),
