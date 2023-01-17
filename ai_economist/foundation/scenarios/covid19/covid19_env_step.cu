@@ -332,8 +332,8 @@
             int * env_timestep_arr,
             const int kNumAgents,
             const int kEpisodeLength,
-            float* obs_f_world_agent,
-            float* obs_f_world_agent_FED_Balance_Sheet,
+            float* obs_f_world_agent_state,
+            float* obs_f_world_agent_state_FED_Balance_Sheet,
             float* FEDBalanceSheet,
             const float MaxFEDBalanceSheet,
             float* QE,
@@ -469,12 +469,12 @@
                 
             // Federal Reserve
             
-                obs_f_world_agent[
+                obs_f_world_agent_state[
                     kTimeIndependentArrayIdx
                 ] = QE[kArrayIdxCurrentTime] /
                     MaxQE;
 
-                obs_f_world_agent_FED_Balance_Sheet[
+                obs_f_world_agent_state_FED_Balance_Sheet[
                     kTimeIndependentArrayIdx
                 ] = FEDBalanceSheet[kArrayIdxCurrentTime] /
                     MaxFEDBalanceSheet;

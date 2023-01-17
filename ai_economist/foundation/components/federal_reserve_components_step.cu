@@ -38,19 +38,19 @@ extern "C" {
 
         // Setting the (federal government) Federal Reserve's QE level
         // to be the QE level for all the US states
-        if (kAgentId < kNumAgents - 1) {
+        if (kAgentId < kNumAgents - 2) {
             // Indices for time-dependent and time-independent arrays
             // Time dependent arrays have shapes (num_envs,
-            // kEpisodeLength + 1, kNumAgents - 1)
-            // Time independent arrays have shapes (num_envs, kNumAgents - 1)
+            // kEpisodeLength + 1, kNumAgents - 2)
+            // Time independent arrays have shapes (num_envs, kNumAgents - 2)
             const int kArrayIdxOffset = kEnvId * (kEpisodeLength + 1) *
-                (kNumAgents - 1);
+                (kNumAgents - 2);
             int time_dependent_array_index_curr_t = kArrayIdxOffset +
-                env_timestep_arr[kEnvId] * (kNumAgents - 1) + kAgentId;
+                env_timestep_arr[kEnvId] * (kNumAgents - 2) + kAgentId;
             int time_dependent_array_index_prev_t = kArrayIdxOffset +
-                (env_timestep_arr[kEnvId] - 1) * (kNumAgents - 1) + kAgentId;
+                (env_timestep_arr[kEnvId] - 1) * (kNumAgents - 2) + kAgentId;
             const int time_independent_array_index = kEnvId *
-                (kNumAgents - 1) + kAgentId;
+                (kNumAgents - 2) + kAgentId;
 
             if ((env_timestep_arr[kEnvId] - 1) % kQEInterval == 0) {
                 assert(0 <= actions[kEnvId] <= kNumQELevels);

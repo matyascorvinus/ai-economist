@@ -35,10 +35,10 @@ extern "C" {
 
         assert(env_timestep_arr[kEnvId] > 0 &&
             env_timestep_arr[kEnvId] <= kEpisodeLength);
-        assert (kAgentId <= kNumAgents- 1);
+        assert (kAgentId <= kNumAgents - 1);
 
         // Update the stringency levels for the US states
-        if (kAgentId < (kNumAgents- 2)) {
+        if (kAgentId < (kNumAgents - 2)) {
             // Indices for time-dependent and time-independent arrays
             // Time dependent arrays have shapes
             // (num_envs, kEpisodeLength + 1, kNumAgents- 2)
@@ -99,9 +99,9 @@ extern "C" {
         // Update planner obs after all the agents' obs are updated
         __syncthreads();
 
-        if (kAgentId == kNumAgents- 2) {
-            for (int ag_id = 0; ag_id < (kNumAgents- 2); ag_id++) {
-                const int kIndex = kEnvId * (kNumAgents- 2) + ag_id;
+        if (kAgentId == kNumAgents - 2) {
+            for (int ag_id = 0; ag_id < (kNumAgents - 2); ag_id++) {
+                const int kIndex = kEnvId * (kNumAgents - 2) + ag_id;
                 obs_p_stringency_policy_indicators[
                     kIndex
                 ] = 
@@ -136,7 +136,7 @@ extern "C" {
         
         assert(env_timestep_arr[kEnvId] > 0 &&
             env_timestep_arr[kEnvId] <= kEpisodeLength);
-        assert (kAgentId <= kNumAgents- 1);
+        assert (kAgentId <= kNumAgents - 1);
 
         int t_since_last_subsidy = env_timestep_arr[kEnvId] %
             kSubsidyInterval;
@@ -247,7 +247,7 @@ extern "C" {
         }
 
         // Update the vaccinated numbers for just the US states
-        if (kAgentId < (kNumAgents- 2)) {
+        if (kAgentId < (kNumAgents - 2)) {
             const int time_independent_array_index = kEnvId *
                 (kNumAgents- 2) + kAgentId;
             if ((env_timestep_arr[kEnvId] >= kTimeWhenVaccineDeliveryBegins) &&
@@ -259,7 +259,7 @@ extern "C" {
             }
             obs_a_vaccination_campaign_t_until_next_vaccines[
                 time_independent_array_index] = t_until_next_vac;
-        } else if (kAgentId == kNumAgents- 2) {
+        } else if (kAgentId == kNumAgents - 2) {
             obs_p_vaccination_campaign_t_until_next_vaccines[kEnvId] =
             t_until_next_vac;
         }
