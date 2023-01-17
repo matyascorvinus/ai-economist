@@ -28,6 +28,10 @@ extern "C" {
     ) {
         const int kEnvId = blockIdx.x;
         const int kAgentId = threadIdx.x;
+        printf("FederalQuantitativeEasing kEnvId: %d, kAgentId: %d\n", kEnvId, kAgentId);
+        printf("FederalQuantitativeEasing kNumAgents: %d\n", kNumAgents);
+        printf("FederalQuantitativeEasing kEpisodeLength: %d\n", kEpisodeLength);
+        printf("FederalQuantitativeEasing env_timestep_arr[kEnvId]: %d\n", env_timestep_arr[kEnvId]);
 
         assert(env_timestep_arr[kEnvId] > 0 &&
             env_timestep_arr[kEnvId] <= kEpisodeLength);

@@ -29,6 +29,10 @@ extern "C" {
         if (kAgentId == 0) {
             env_timestep_arr[kEnvId] += 1;
         }
+        printf("CudaControlUSStateOpenCloseStatusStep kEnvId: %d, kAgentId: %d\n", kEnvId, kAgentId);
+        printf("CudaControlUSStateOpenCloseStatusStep kNumAgents: %d\n", kNumAgents);
+        printf("CudaControlUSStateOpenCloseStatusStep kEpisodeLength: %d\n", kEpisodeLength);
+        printf("CudaControlUSStateOpenCloseStatusStep env_timestep_arr[kEnvId]: %d\n", env_timestep_arr[kEnvId]);
 
         // Wait here until timestep has been updated
         __syncthreads();
@@ -137,6 +141,10 @@ extern "C" {
         assert(env_timestep_arr[kEnvId] > 0 &&
             env_timestep_arr[kEnvId] <= kEpisodeLength);
         assert (kAgentId <= kNumAgents - 1);
+        printf("CudaFederalGovernmentSubsidyStep kEnvId: %d, kAgentId: %d\n", kEnvId, kAgentId);
+        printf("CudaFederalGovernmentSubsidyStep kNumAgents: %d\n", kNumAgents);
+        printf("CudaFederalGovernmentSubsidyStep kEpisodeLength: %d\n", kEpisodeLength);
+        printf("CudaFederalGovernmentSubsidyStep env_timestep_arr[kEnvId]: %d\n", env_timestep_arr[kEnvId]);
 
         int t_since_last_subsidy = env_timestep_arr[kEnvId] %
             kSubsidyInterval;
@@ -231,6 +239,10 @@ extern "C" {
             kEpisodeLength);
         assert(kTimeWhenVaccineDeliveryBegins > 0);
         assert (kAgentId <= kNumAgents- 1);
+        printf("CudaVaccinationCampaignStep kEnvId: %d, kAgentId: %d\n", kEnvId, kAgentId);
+        printf("CudaVaccinationCampaignStep kNumAgents: %d\n", kNumAgents);
+        printf("CudaVaccinationCampaignStep kEpisodeLength: %d\n", kEpisodeLength);
+        printf("CudaVaccinationCampaignStep env_timestep_arr[kEnvId]: %d\n", env_timestep_arr[kEnvId]);
 
         // CUDA version of generate observations()
         int t_first_delivery = kTimeWhenVaccineDeliveryBegins +
