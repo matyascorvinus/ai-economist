@@ -62,9 +62,16 @@ extern "C" {
             }
             // Setting the subsidies for the US states
             // based on the federal government's QE level
+            float quantitative_level_frac = 0.0;
+            if(QE_level[time_dependent_array_index_curr_t] < kNumQELevels - 10) {
+               quantitative_level_frac = (QE_level[time_dependent_array_index_curr_t] - 10) / kNumQELevels;
+            }
+            else {
+               quantitative_level_frac = (QE_level[time_dependent_array_index_curr_t]) / kNumQELevels;
+            }
             QE[time_dependent_array_index_curr_t] =
-                QE_level[time_dependent_array_index_curr_t] *
-                KMaxDailyQEPerState[kAgentId] / (kNumQELevels - 10);
+                quantitative_level_frac *
+                KMaxDailyQEPerState[kAgentId];
 
             obs_a_time_until_next_QE[
                 time_independent_array_index] =

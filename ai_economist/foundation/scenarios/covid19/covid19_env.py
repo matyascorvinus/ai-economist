@@ -1296,14 +1296,17 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             * self.value_of_life
             / self.planner_health_norm
         )
-        
-        fraction_between_QE_and_subsidy = (
-            np.sum(self.world.global_state["Subsidy"][
+        fraction_between_QE_and_subsidy = 1.0
+        if(np.sum(self.world.global_state["QE"][
                 self.world.timestep
-            ]) / np.sum(self.world.global_state["QE"][
-                self.world.timestep
-            ])
-        ) 
+            ]) != 0):
+            fraction_between_QE_and_subsidy = (
+                np.sum(self.world.global_state["Subsidy"][
+                    self.world.timestep
+                ]) / np.sum(self.world.global_state["QE"][
+                    self.world.timestep
+                ])
+            ) 
         
         # final_interest_rate = (self.risk_free_interest_rate + self.world.global_state["Interest Rate"][self.world.timestep]) * fraction_between_QE_and_subsidy
         # + self.us_treasury_yields_10_years * ( 1 - fraction_between_QE_and_subsidy )

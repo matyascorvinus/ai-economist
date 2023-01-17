@@ -215,7 +215,11 @@ class FederalQuantitativeEasing(BaseComponent):
             QE_level_frac = 0.0
 
             # Update QE level
-            QE_level_frac = QE_level / (self.num_QE_levels - 10)
+            if(QE_level < self.num_QE_levels - 10):
+                QE_level_frac = (QE_level - 10) / (self.num_QE_levels)
+            else:
+                QE_level_frac = (QE_level) / (self.num_QE_levels)
+                
                 
             daily_statewise_QE = (
                 QE_level_frac * self.max_daily_QE_per_state
