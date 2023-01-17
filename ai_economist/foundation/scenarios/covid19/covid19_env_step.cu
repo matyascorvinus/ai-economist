@@ -279,6 +279,7 @@ extern "C" {
         float* vaccinated,
         float* unemployed,
         float* subsidy,
+        float* quantitative,
         float* productivity,
         int* stringency_level,
         const int kNumStringencyLevels,
@@ -502,6 +503,7 @@ extern "C" {
         const float kPlannerEconomicNorm,
         float* deaths,
         float* subsidy,
+        float* quantitative,
         float* postsubsidy_productivity,
         int* env_done_arr,
         int* env_timestep_arr,
@@ -573,17 +575,20 @@ extern "C" {
                 (kPlannerHealthNorm / static_cast<float>(kValueOfLife));
 
             float total_subsidy = 0.0;
+            float total_quantitative = 0.0;
             float total_postsubsidy_productivity = 0.0;
             for (int ag_id = 0; ag_id < (kNumAgents - 1); ag_id ++) {
                 total_subsidy += subsidy[kArrayIndexOffset +
+                    env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
+                total_quantitative += quantitative[kArrayIndexOffset +
                     env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
                 total_postsubsidy_productivity +=
                     postsubsidy_productivity[kArrayIndexOffset +
                     env_timestep_arr[kEnvId] * (kNumAgents - 1) + ag_id];
             }
-
+            total_postsubsidy_productivity = total_postsubsidy_productivity - 0.2 * total_quantitative
             float cost_of_subsidy = (1 + kRiskFreeInterestRate) *
-                total_subsidy;
+                total_quantitative + (total_subsidy - total_quantitative) * (1.05);
             float marginal_planner_economic_index = crra_nonlinearity(
                 (total_postsubsidy_productivity - cost_of_subsidy) /
                     kPlannerEconomicNorm,

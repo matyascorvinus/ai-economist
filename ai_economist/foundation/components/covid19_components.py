@@ -468,6 +468,240 @@ class FederalGovernmentSubsidy(BaseComponent):
 
 
 @component_registry.add
+class FederalReserveComponent(BaseComponent):
+    """
+    Args:
+        quantitative_interval (int): The number of days over which the Quantitative Easing/Tightening amount
+            is evenly rolled out.
+            Note: shortening the quantitative interval increases the total amount of money
+            that the planner could possibly spend. For instance, if the quantitative
+            interval is 30, the planner can create a quantitative every 30 days.
+        num_quantitative_levels (int): The number of Quantitative Easing/Tightening levels.
+            Note: with max_annual_quantitative_per_person=10000, one round of Quantitative Easing/Tightening at
+            the maximum Quantitative Easing level equals an expenditure of roughly $1.5 trillion
+            (given the US population of 330 million). The same goes for the maximum Tightening level.
+            If the planner chooses the maximum Quantitative Easing/Tightening amount, the $1.5 trillion
+            is rolled out gradually over the Quantitative Easing/Tightening interval.
+        max_annual_quantitative_per_person (float): The maximum annual quantitative that may be
+            allocated per person.
+    """
+
+    name = "FederalReserveComponent"
+    required_entities = []
+    agent_subclasses = ["BasicPlanner"]
+
+    def __init__(
+        self,
+        *base_component_args,
+        quantitative_interval=90,
+        num_quantitative_levels=20,
+        max_annual_quantitative_per_person=20000,
+        **base_component_kwargs,
+    ):
+        self.quantitative_interval = int(quantitative_interval)
+        assert self.quantitative_interval >= 1
+
+        self.num_quantitative_levels = int(num_quantitative_levels)
+        assert self.num_quantitative_levels >= 1
+
+        self.max_annual_quantitative_per_person = float(max_annual_quantitative_per_person)
+        assert self.max_annual_quantitative_per_person >= 0
+
+        self.np_int_dtype = np.int32
+
+        # (This will be overwritten during component_step; see below)
+        self._quantitative_amount_per_level = None
+        self._quantitative_level_array = None
+
+        super().__init__(*base_component_args, **base_component_kwargs)
+
+        self.default_planner_action_mask = [1 for _ in range(self.num_quantitative_levels)]
+        self.no_op_planner_action_mask = [0 for _ in range(self.num_quantitative_levels)]
+
+        # (This will be overwritten during reset; see below)
+        self.max_daily_quantitative_per_state = np.array(
+            self.n_agents, dtype=self.np_int_dtype
+        )
+
+    def get_additional_state_fields(self, agent_cls_name):
+        if agent_cls_name == "BasicPlanner":
+            return {"Total Quantitative": 0, "Current Quantitative Level": 0}
+        return {}
+
+    def additional_reset_steps(self):
+        # Pre-compute maximum state-specific quantitative levels
+        self.max_daily_quantitative_per_state = (
+            self.world.us_state_population * self.max_annual_quantitative_per_person / 365
+        )
+
+    def get_n_actions(self, agent_cls_name):
+        if agent_cls_name == "BasicPlanner":
+            # Number of non-zero quantitative levels
+            # (the action 0 pertains to the no-quantitative case)
+            return self.num_quantitative_levels
+        return None
+
+    def generate_masks(self, completions=0):
+        masks = {}
+        if self.world.use_real_world_policies:
+            masks[self.world.planner.idx] = self.default_planner_action_mask
+        else:
+            if self.world.timestep % self.quantitative_interval == 0:
+                masks[self.world.planner.idx] = self.default_planner_action_mask
+            else:
+                masks[self.world.planner.idx] = self.no_op_planner_action_mask
+        return masks
+
+    def get_data_dictionary(self):
+        """
+        Create a dictionary of data to push to the device
+        """
+        data_dict = DataFeed()
+        data_dict.add_data(
+            name="quantitative_interval",
+            data=self.quantitative_interval,
+        )
+        data_dict.add_data(
+            name="num_quantitative_levels",
+            data=self.num_quantitative_levels,
+        )
+        data_dict.add_data(
+            name="max_daily_quantitative_per_state",
+            data=self.max_daily_quantitative_per_state,
+        )
+        data_dict.add_data(
+            name="default_planner_action_mask",
+            data=[1] + self.default_planner_action_mask,
+        )
+        data_dict.add_data(
+            name="no_op_planner_action_mask",
+            data=[1] + self.no_op_planner_action_mask,
+        )
+        return data_dict
+
+    def get_tensor_dictionary(self):
+        """
+        Create a dictionary of (Pytorch-accessible) data to push to the device
+        """
+        tensor_dict = DataFeed()
+        return tensor_dict
+
+    def component_step(self):
+        if self.world.use_cuda:
+            self.world.cuda_component_step[self.name](
+                self.world.cuda_data_manager.device_data("quantitative_level"),
+                self.world.cuda_data_manager.device_data("quantitative"),
+                self.world.cuda_data_manager.device_data("quantitative_interval"),
+                self.world.cuda_data_manager.device_data("num_quantitative_levels"),
+                self.world.cuda_data_manager.device_data("max_daily_quantitative_per_state"),
+                self.world.cuda_data_manager.device_data("default_planner_action_mask"),
+                self.world.cuda_data_manager.device_data("no_op_planner_action_mask"),
+                self.world.cuda_data_manager.device_data(f"{_ACTIONS}_p"),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_{self.name}-t_until_next_quantitative"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_a_{self.name}-current_quantitative_level"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_{self.name}-t_until_next_quantitative"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_{self.name}-current_quantitative_level"
+                ),
+                self.world.cuda_data_manager.device_data(
+                    f"{_OBSERVATIONS}_p_action_mask"
+                ),
+                self.world.cuda_data_manager.device_data("_timestep_"),
+                self.world.cuda_data_manager.meta_info("n_agents"),
+                self.world.cuda_data_manager.meta_info("episode_length"),
+                block=self.world.cuda_function_manager.block,
+                grid=self.world.cuda_function_manager.grid,
+            )
+        else:
+            if self.world.use_real_world_policies:
+                if self._quantitative_amount_per_level is None:
+                    self._quantitative_amount_per_level = (
+                        self.world.us_population
+                        * self.max_annual_quantitative_per_person
+                        / self.num_quantitative_levels
+                        * self.quantitative_interval
+                        / 365
+                    )
+                    self._quantitative_level_array = np.zeros((self._episode_length + 1))
+                # Use the action taken in the previous timestep
+                current_quantitative_amount = self.world.real_world_quantitative[
+                    self.world.timestep - 1
+                ]
+                if current_quantitative_amount > 0:
+                    _quantitative_level = np.round(
+                        (current_quantitative_amount / self._quantitative_amount_per_level)
+                    )
+                    for t_idx in range(
+                        self.world.timestep - 1,
+                        min(
+                            len(self._quantitative_level_array),
+                            self.world.timestep - 1 + self.quantitative_interval,
+                        ),
+                    ):
+                        self._quantitative_level_array[t_idx] += _quantitative_level
+                quantitative_level = self._quantitative_level_array[self.world.timestep - 1]
+            else:
+                # Update the quantitative level only every self.quantitative_interval, since the
+                # other actions are masked out.
+                if (self.world.timestep - 1) % self.quantitative_interval == 0:
+                    quantitative_level = self.world.planner.get_component_action(self.name)
+                else:
+                    quantitative_level = self.world.planner.state["Current Quantitative Level"]
+
+            assert 0 <= quantitative_level <= self.num_quantitative_levels
+            self.world.planner.state["Current Quantitative Level"] = np.array(
+                quantitative_level
+            ).astype(self.np_int_dtype)
+
+            # Update Quantitative level - 0 - 10 = Tightening, 10 - 20 = Easing
+            
+            if(quantitative_level <= self.num_quantitative_levels - 10):
+                quantitative_level_frac = (quantitative_level - 10) / (self.num_quantitative_levels)
+            
+            else:
+                quantitative_level_frac = (quantitative_level) / (self.num_quantitative_levels)
+                            
+            daily_statewise_quantitative = (
+                quantitative_level_frac * self.max_daily_quantitative_per_state
+            )
+
+            self.world.global_state["Quantitative"][
+                self.world.timestep
+            ] = daily_statewise_quantitative
+            self.world.planner.state["Total Quantitative"] += np.sum(daily_statewise_quantitative)
+
+    def generate_observations(self):
+        # Allow the agents/planner to know when the next Quantitative might come.
+        # Obs should = 0 when the next timestep could include a quantitative
+        t_since_last_quantitative = self.world.timestep % self.quantitative_interval
+        # (this is normalized to 0<-->1)
+        t_until_next_quantitative = self.quantitative_interval - t_since_last_quantitative
+        t_vec = t_until_next_quantitative * np.ones(self.n_agents)
+
+        current_quantitative_level = self.world.planner.state["Current Quantitative Level"]
+        sl_vec = current_quantitative_level * np.ones(self.n_agents)
+
+        # Normalized observations
+        obs_dict = dict()
+        obs_dict["a"] = {
+            "t_until_next_quantitative": t_vec / self.quantitative_interval,
+            "current_quantitative_level": sl_vec / self.num_quantitative_levels,
+        }
+        obs_dict[self.world.planner.idx] = {
+            "t_until_next_quantitative": t_until_next_quantitative / self.quantitative_interval,
+            "current_quantitative_level": current_quantitative_level / self.num_quantitative_levels,
+        }
+
+        return obs_dict
+
+    
+@component_registry.add
 class VaccinationCampaign(BaseComponent):
     """
     Implements a (passive) component for delivering vaccines to agents once a certain

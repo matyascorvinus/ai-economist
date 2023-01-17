@@ -208,6 +208,107 @@ extern "C" {
         }
     }
 
+    __global__ void CudaFederalReserveComponentStep(
+        int * quantitative_level,
+        float * quantitative,
+        const int kQuantitativeInterval,
+        const int kNumQuantitativeLevels,
+        const float * KMaxDailyQuantitativePerState,
+        const int * kDefaultPlannerActionMask,
+        const int * kNoOpPlannerActionMask,
+        int * actions,
+        float * obs_a_time_until_next_quantitative,
+        float * obs_a_current_quantitative_level,
+        float * obs_p_time_until_next_quantitative,
+        float * obs_p_current_quantitative_level,
+        float * obs_p_action_mask,
+        int * env_timestep_arr,
+        const int kNumAgents,
+        const int kEpisodeLength
+    ) {
+        const int kEnvId = blockIdx.x;
+        const int kAgentId = threadIdx.x;
+
+        assert(env_timestep_arr[kEnvId] > 0 &&
+            env_timestep_arr[kEnvId] <= kEpisodeLength);
+        assert (kAgentId <= kNumAgents - 1);
+
+        int t_since_last_quantitative = env_timestep_arr[kEnvId] %
+            kQuantitativeInterval;
+
+        // Setting the (federal government) planner's quantitative level
+        // to be the quantitative level for all the US states
+        if (kAgentId < kNumAgents - 1) {
+            // Indices for time-dependent and time-independent arrays
+            // Time dependent arrays have shapes (num_envs,
+            // kEpisodeLength + 1, kNumAgents - 1)
+            // Time independent arrays have shapes (num_envs, kNumAgents - 1)
+            const int kArrayIdxOffset = kEnvId * (kEpisodeLength + 1) *
+                (kNumAgents - 1);
+            int time_dependent_array_index_curr_t = kArrayIdxOffset +
+                env_timestep_arr[kEnvId] * (kNumAgents - 1) + kAgentId;
+            int time_dependent_array_index_prev_t = kArrayIdxOffset +
+                (env_timestep_arr[kEnvId] - 1) * (kNumAgents - 1) + kAgentId;
+            const int time_independent_array_index = kEnvId *
+                (kNumAgents - 1) + kAgentId;
+
+            if ((env_timestep_arr[kEnvId] - 1) % kQuantitativeInterval == 0) {
+                assert(0 <= actions[kEnvId] <= kNumQuantitativeLevels);
+                quantitative_level[time_dependent_array_index_curr_t] =
+                    actions[kEnvId];
+            } else {
+                quantitative_level[time_dependent_array_index_curr_t] =
+                    quantitative_level[time_dependent_array_index_prev_t];
+            }
+            // Setting the subsidies for the US states
+            // based on the federal government's quantitative level
+            float quantitative_level_frac = 0.0;
+            if(quantitative_level[time_dependent_array_index_curr_t] < kNumQuantitativeLevels - 10) {
+                quantitative_level_frac = (quantitative_level[time_dependent_array_index_curr_t] - 10) / kNumQuantitativeLevels
+            } else {
+                quantitative_level_frac = (quantitative_level[time_dependent_array_index_curr_t]) / (kNumQuantitativeLevels)
+            }
+            quantitative[time_dependent_array_index_curr_t] =
+                quantitative_level_frac * KMaxDailyQuantitativePerState[kAgentId] ;
+
+            obs_a_time_until_next_quantitative[
+                time_independent_array_index] =
+                    1 - (t_since_last_quantitative /
+                    static_cast<float>(kQuantitativeInterval));
+            obs_a_current_quantitative_level[
+                time_independent_array_index] =
+                    quantitative_level[time_dependent_array_index_curr_t] /
+                    static_cast<float>(kNumQuantitativeLevels);
+        } else if (kAgentId == (kNumAgents - 1)) {
+            for (int action_id = 0; action_id < kNumQuantitativeLevels + 1;
+                action_id++) {
+                int action_mask_array_index = kEnvId *
+                    (kNumQuantitativeLevels + 1) + action_id;
+                if (env_timestep_arr[kEnvId] % kQuantitativeInterval == 0) {
+                    obs_p_action_mask[action_mask_array_index] =
+                        kDefaultPlannerActionMask[action_id];
+                } else {
+                    obs_p_action_mask[action_mask_array_index] =
+                        kNoOpPlannerActionMask[action_id];
+                }
+            }
+            // Update planner obs after the agent's obs are updated
+            __syncthreads();
+
+            if (kAgentId == (kNumAgents - 1)) {
+                // Just use the values for agent id 0
+                obs_p_time_until_next_quantitative[kEnvId] =
+                    obs_a_time_until_next_quantitative[
+                        kEnvId * (kNumAgents - 1)
+                    ];
+                obs_p_current_quantitative_level[kEnvId] = 
+                    obs_a_current_quantitative_level[
+                        kEnvId * (kNumAgents - 1)
+                    ];
+            }
+        }
+    }
+
     __global__ void CudaVaccinationCampaignStep(
         int * vaccinated,
         const int * kNumVaccinesPerDelivery,

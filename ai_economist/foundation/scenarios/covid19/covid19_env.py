@@ -225,10 +225,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             self.world.real_world_stringency_policy = self._real_world_data["policy"][
                 self.start_date_index :
             ]
-            # Planner subsidy levels
+            # Planner subsidy/quantitative levels
             self.world.real_world_subsidy = self._real_world_data["subsidy"][
                 self.start_date_index :
             ]
+            self.world.real_world_quantitative = self._real_world_data["quantitative"][
+                self.start_date_index :
+            ]
+
 
         # Policy --> Unemployment
         #   For accurately modeling the state-wise unemployment, we convolve
@@ -436,6 +440,17 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         data_dict.add_data(
             name="subsidy",
             data=self.world.global_state["Subsidy"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="quantitative_level",
+            data=self.world.global_state["Quantitative Level"].astype(self.np_int_dtype),
+            save_copy_and_apply_at_reset=True,
+        ) 
+        # Federal Reserve
+        data_dict.add_data(
+            name="quantitative",
+            data=self.world.global_state["Quantitative"],
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
@@ -666,6 +681,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("vaccinated"),
                 self.cuda_data_manager.device_data("unemployed"),
                 self.cuda_data_manager.device_data("subsidy"),
+                self.cuda_data_manager.device_data("quantitative"),
                 self.cuda_data_manager.device_data("productivity"),
                 self.cuda_data_manager.device_data("stringency_level"),
                 self.cuda_data_manager.device_data("num_stringency_levels"),
@@ -949,7 +965,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Productivity
         postsubsidy_productivity_t = self.world.global_state[
             "Postsubsidy Productivity"
-        ][self.world.timestep]
+        ][self.world.timestep] - 0.2 * self.world.global_state[
+            "Total Quantitative"
+        ][self.world.timestep] # replace 0.2 by np.random.randint(4, size = 1) / 20 when we found a good cuda solution
+        
         normalized_postsubsidy_productivity_t = (
             postsubsidy_productivity_t / self.maximum_productivity_t
         )
@@ -1036,6 +1055,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("deaths"),
                 self.cuda_data_manager.device_data("subsidy"),
                 self.cuda_data_manager.device_data("postsubsidy_productivity"),
+                self.cuda_data_manager.device_data("quantitative"),
                 self.cuda_data_manager.device_data("_done_"),
                 self.cuda_data_manager.device_data("_timestep_"),
                 self.cuda_data_manager.meta_info("n_agents"),
@@ -1077,6 +1097,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         )
 
         subsidy_t = self.world.global_state["Subsidy"][self.world.timestep]
+        quantitative_t = self.world.global_state["Quantitative"][self.world.timestep]
         postsubsidy_productivity_t = self.world.global_state[
             "Postsubsidy Productivity"
         ][self.world.timestep]
@@ -1135,7 +1156,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         )
 
         # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
-        cost_of_subsidy_t = (1 + self.risk_free_interest_rate) * np.sum(subsidy_t)
+        cost_of_subsidy_t = (1 + self.risk_free_interest_rate) * np.sum(quantitative_t) + (np.sum(subsidy_t) - np.sum(quantitative_t)) * 1.05
         # Use a "crra" nonlinearity on the planner economic reward
         marginal_planner_economic_index = crra_nonlinearity(
             (np.sum(postsubsidy_productivity_t) - cost_of_subsidy_t)
@@ -1226,6 +1247,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         # All US states start with zero subsidy and zero Postsubsidy Productivity
         self.set_global_state("Subsidy Level", dtype=self.np_float_dtype)
+        self.set_global_state("Quantitative Level", dtype=self.np_float_dtype)
+        self.set_global_state("Quantitative", dtype=self.np_float_dtype)
         self.set_global_state("Subsidy", dtype=self.np_float_dtype)
         self.set_global_state("Postsubsidy Productivity", dtype=self.np_float_dtype)
 
@@ -1306,6 +1329,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "Stringency Level",
             "Subsidy Level",
             "Subsidy",
+            "Quantitative Level",
+            "Quantitative",
             "Postsubsidy Productivity",
         ]
         # If no values are passed, set everything to zeros.
