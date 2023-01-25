@@ -344,10 +344,10 @@
         ) {
             const int kEnvId = blockIdx.x;
             const int kAgentId = threadIdx.x;
-            printf("kEnvId: %d, kAgentId: %d", kEnvId, kAgentId);
-            printf("kNumAgents: %d", kNumAgents);
-            printf("kEpisodeLength: %d", kEpisodeLength);
-            printf("env_timestep_arr[kEnvId]: %d", env_timestep_arr[kEnvId]);
+            printf("CudaCovidAndEconomySimulationStep kEnvId: %d, kAgentId: %d\n", kEnvId, kAgentId);
+            printf("CudaCovidAndEconomySimulationStep kNumAgents: %d\n", kNumAgents);
+            printf("CudaCovidAndEconomySimulationStep kEpisodeLength: %d\n", kEpisodeLength);
+            printf("CudaCovidAndEconomySimulationStep env_timestep_arr[kEnvId]: %d\n", env_timestep_arr[kEnvId]);
             assert(env_timestep_arr[kEnvId] > 0 &&
                 env_timestep_arr[kEnvId] <= kEpisodeLength);
             assert (kAgentId <= kNumAgents - 1);

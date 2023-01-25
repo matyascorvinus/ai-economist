@@ -73,6 +73,7 @@ class RLlibEnvWrapper(MultiAgentEnv):
 
         self.observation_space = self._dict_to_spaces_dict(obs["0"])
         self.observation_space_pl = self._dict_to_spaces_dict(obs["p"])
+        self.observation_space_fed = self._dict_to_spaces_dict(obs["f"])
 
         if self.env.world.agents[0].multi_action_mode:
             self.action_space = spaces.MultiDiscrete(
@@ -100,6 +101,18 @@ class RLlibEnvWrapper(MultiAgentEnv):
             )
             self.action_space_pl.dtype = np.int64
 
+        if self.env.world.federal_reserve.multi_action_mode:
+            self.action_space_fed = spaces.MultiDiscrete(
+                self.env.get_agent("f").action_spaces
+            )
+            self.action_space_fed.dtype = np.int64
+            self.action_space_fed.nvec = self.action_space_pl.nvec.astype(np.int64)
+
+        else:
+            self.action_space_fed = spaces.Discrete(
+                self.env.get_agent("f").action_spaces
+            )
+            self.action_space_fed.dtype = np.int64
         self._seed = None
         if self.verbose:
             print("[EnvWrapper] Spaces")

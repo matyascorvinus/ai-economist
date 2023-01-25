@@ -1139,9 +1139,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # --------------------------
         obs_dict[self.world.federal_reserve.idx] = {
             "agent_state": normalized_redux_agent_state,
-            "agent_postsubsidy_productivity": normalized_postsubsidy_productivity_t,
+            #"agent_postsubsidy_productivity": normalized_postsubsidy_productivity_t,
             "lagged_stringency_level": normalized_lagged_stringency_level,
-            "normalized_QE_t": normalized_QE_t,
+            #"normalized_QE_t": normalized_QE_t,
             "agent_state_FED_Balance_Sheet": normalized_FED_balance_sheet_t,
         }
 
