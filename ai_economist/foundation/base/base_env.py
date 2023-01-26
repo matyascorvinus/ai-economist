@@ -692,7 +692,7 @@ class BaseEnvironment(ABC):
 
         # Process the observations
         if flatten_observations:
-            for o_dict in [obs, agent_wise_planner_obs]:
+            for o_dict in [obs, agent_wise_planner_obs, agent_wise_federal_reserve_obs]:
                 for aidx, aobs in o_dict.items():
                     if not aobs:
                         continue
@@ -706,24 +706,7 @@ class BaseEnvironment(ABC):
                         print("Error when packaging obs.")
                         print("Agent index: {}\nRaw obs: {}\n".format(aidx, aobs))
                         raise
-            for o_dict in [obs, agent_wise_federal_reserve_obs]:
-                print(agent_wise_federal_reserve_obs.keys())
-                for aidx, aobs in o_dict.items():
-                    print("agent_wise_federal_reserve_obs. aidx")
-                    print(aidx)
-                    print("agent_wise_federal_reserve_obs. ssadsfsdfsd")
-                    if not aobs:
-                        continue
-                    if aidx not in self._packagers:
-                        self._packagers[aidx] = self._build_packager(
-                            aobs, put_in_both=["time"]
-                        )
-                    try: 
-                        o_dict[aidx] = self._package(aobs, *self._packagers[aidx]) 
-                    except ValueError:
-                        print("Error when packaging obs.")
-                        print("Agent index: {}\nRaw obs: {}\n".format(aidx, aobs))
-                        raise
+ 
 
 
         for k, v in agent_wise_planner_obs.items():
