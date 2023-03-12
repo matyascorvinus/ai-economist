@@ -46,10 +46,10 @@ env_configs = {
         "components": [
             {"ControlUSStateOpenCloseStatus": {"action_cooldown_period": 28}},
             {
-                "FederalGovernmentSubsidy": {
-                    "num_subsidy_levels": 20,
-                    "subsidy_interval": 90,
-                    "max_annual_subsidy_per_person": 20000,
+                "FederalGovernmentSubsidyAndQuantitativePolicies": {
+                    "num_subsidy_quantitative_policy_level": 20,
+                    "subsidy_quantitative_policy_interval": 90,
+                    "max_annual_monetary_unit_per_person": 20000,
                 }
             },
             {

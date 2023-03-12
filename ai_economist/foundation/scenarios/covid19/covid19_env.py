@@ -109,6 +109,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         health_priority_scaling_agents=1,
         health_priority_scaling_planner=1,
         reward_normalization_factor=1,
+        us_tax_wedge=0.282,
+        us_government_spending_economic_multiplier=0.8,
+
         **base_env_kwargs,
     ):
         verify_activation_code()
@@ -283,6 +286,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         gdp_per_worker = (self.gdp_per_capita / workers_per_capita).astype(
             self.np_float_dtype
         )
+        # The tax wedge for the average single worker in the United States increased by 1.2 percentage points from 27.2% in 2020 to 28.4% in
+        # 2021, according to the Taxing Wages - the United States. https://www.oecd.org/unitedstates/taxing-wages-united-states.pdf
+
+
+        # The US government spending multiplier is 0.8, according to the Congressional Budget Office. https://www.crfb.org/papers/comparing-fiscal-multipliers
+        self.us_tax_wedge = self.np_float_dtype(us_tax_wedge)
+        self.us_government_spending_economic_multiplier = self.np_float_dtype(us_government_spending_economic_multiplier)
         self.num_days_in_an_year = 365
         self.daily_production_per_worker = (
             gdp_per_worker / self.num_days_in_an_year
@@ -306,6 +316,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             population_between_age_18_65=self.pop_between_age_18_65,
         )
         self.maximum_productivity_t = max_productivity_t
+        self.maximum_taxable_productivity_t = (
+            max_productivity_t * self.us_tax_wedge
+        )
 
         # Economic reward non-linearity
         self.economic_reward_crra_eta = self.np_float_dtype(economic_reward_crra_eta)
@@ -432,8 +445,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
-            name="subsidy_level",
-            data=self.world.global_state["Subsidy Level"].astype(self.np_int_dtype),
+            name="num_subsidy_quantitative_policy_level",
+            data=self.world.global_state["Subsidy Quantitative Policy Level"].astype(self.np_int_dtype),
             save_copy_and_apply_at_reset=True,
         )
         # Economy-related
@@ -442,15 +455,25 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             data=self.world.global_state["Subsidy"],
             save_copy_and_apply_at_reset=True,
         )
-        data_dict.add_data(
-            name="quantitative_level",
-            data=self.world.global_state["Quantitative Level"].astype(self.np_int_dtype),
-            save_copy_and_apply_at_reset=True,
-        ) 
         # Federal Reserve
         data_dict.add_data(
             name="quantitative",
             data=self.world.global_state["Quantitative"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USDebt",
+            data=self.world.global_state["US Debt"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="FederalReserveBalanceSheet",
+            data=self.world.global_state["Federal Reserve Balance Sheet"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="fed_fund_rate",
+            data=self.world.global_state["Federal Reserve Fund Rate"],
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
@@ -736,6 +759,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("_timestep_"),
                 self.cuda_data_manager.meta_info("n_agents"),
                 self.cuda_data_manager.meta_info("episode_length"),
+                self.cuda_data_manager.device_data("USDebt"), 
                 block=self.world.cuda_function_manager.block,
                 grid=self.world.cuda_function_manager.grid,
             )
@@ -852,11 +876,15 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 population_between_age_18_65=self.pop_between_age_18_65,
             )
 
+            federal_tax_revenue = (
+                productivity_t * self.us_tax_wedge
+            )
             # Subsidies
             # ---------
             # Add federal government subsidy to productivity
             daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
-            postsubsidy_productivity_t = productivity_t + daily_statewise_subsidy_t
+            postsubsidy_productivity_t = productivity_t - federal_tax_revenue + \
+                                         daily_statewise_subsidy_t * self.us_government_spending_economic_multiplier
             self.world.global_state["Postsubsidy Productivity"][
                 curr_t
             ] = postsubsidy_productivity_t
@@ -1246,7 +1274,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         )
 
         # All US states start with zero subsidy and zero Postsubsidy Productivity
-        self.set_global_state("Subsidy Level", dtype=self.np_float_dtype)
+        self.set_global_state("Subsidy Quantitative Policy Level", dtype=self.np_float_dtype)
         self.set_global_state("Quantitative Level", dtype=self.np_float_dtype)
         self.set_global_state("Quantitative", dtype=self.np_float_dtype)
         self.set_global_state("Subsidy", dtype=self.np_float_dtype)
@@ -1327,7 +1355,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "Unemployed",
             "Vaccinated",
             "Stringency Level",
-            "Subsidy Level",
+            "Subsidy Quantitative Policy Level",
             "Subsidy",
             "Quantitative Level",
             "Quantitative",
@@ -1491,11 +1519,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         num_workers = population * population_between_age_18_65
 
-        num_people_that_can_work = np.maximum(0, num_workers - cant_work)
 
+        num_people_that_can_work = np.maximum(0, num_workers - cant_work)
+        # This formula does not count on how unemployed workers consumes the resource of the state - mainly in unemployment benefits.
+        # This formula does not count on how sick workers consumes the resource of the state - mainly in healthcare.
         productivity = (
             num_people_that_can_work * self.daily_production_per_worker
         ).astype(self.np_float_dtype)
+
+        # provide a better formula for productivity taken into account the two factors above.
+        productivity = productivity * (1 - (cant_work / num_workers))
 
         return productivity
 
