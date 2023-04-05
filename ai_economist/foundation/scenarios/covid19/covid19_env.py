@@ -104,17 +104,21 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         start_date="2020-03-22",
         pop_between_age_18_65=0.6,
         infection_too_sick_to_work_rate=0.1,
-        risk_free_interest_rate=0.03,
+        risk_free_interest_rate=0.5/100,
         economic_reward_crra_eta=2,
         health_priority_scaling_agents=1,
         health_priority_scaling_planner=1,
         reward_normalization_factor=1,
         us_tax_wedge=0.282,
-        us_government_spending_economic_multiplier=0.8,
-
+        us_government_spending_economic_multiplier=2.05, # Fiscal multiplier - Average of 1.7 and 3.3 via tax cuts and spending increases
+        us_government_mandatory_and_discretionary_spending=4.4*10**12, 
+        us_government_debt=23*10**12, 
+        us_treasury_yield_long_term=1.35/100,
+        us_M2_money_supply=3955.3*10**9,
+        fed_reserve_balance_sheet=4*10**12,
         **base_env_kwargs,
     ):
-        verify_activation_code()
+        # verify_activation_code()
 
         # Used for datatype checks
         self.np_float_dtype = np.float32
@@ -269,6 +273,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Economy-related
         # Interest rate for borrowing money from the federal reserve
         self.risk_free_interest_rate = self.np_float_dtype(risk_free_interest_rate)
+        self.fed = self.np_float_dtype(risk_free_interest_rate)
+        self.us_treasury_yield_long_term = self.np_float_dtype(us_treasury_yield_long_term)
+        self.us_government_debt = self.np_float_dtype(us_government_debt)
+        self.fed_reserve_balance_sheet = self.np_float_dtype(fed_reserve_balance_sheet)
+        self.us_M2_money_supply = self.np_float_dtype(us_M2_money_supply)
 
         # Compute each worker's daily productivity when at work (to match 2019 GDP)
         # We assume the open/close stringency policy level was always at it's lowest
@@ -316,10 +325,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             population_between_age_18_65=self.pop_between_age_18_65,
         )
         self.maximum_productivity_t = max_productivity_t
-        self.maximum_taxable_productivity_t = (
-            max_productivity_t * self.us_tax_wedge
+        self.us_government_revenue = (
+            self.us_population * self.gdp_per_capita * self.us_tax_wedge
         )
-
+        self.us_gdp = self.us_population * self.gdp_per_capita
+        # 2019 US government spending was $4.4 trillion,
+        # according to the Congressional Budget Office. https://www.cbo.gov/publication/56324
+        self.us_government_mandatory_and_discretionary_spending = \
+            us_government_mandatory_and_discretionary_spending;
+        self.us_federal_deficit = self.us_government_mandatory_and_discretionary_spending \
+            - self.us_government_revenue;
         # Economic reward non-linearity
         self.economic_reward_crra_eta = self.np_float_dtype(economic_reward_crra_eta)
         assert 0.0 <= self.economic_reward_crra_eta < 20.0
@@ -449,6 +464,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             data=self.world.global_state["Subsidy Quantitative Policy Level"].astype(self.np_int_dtype),
             save_copy_and_apply_at_reset=True,
         )
+        data_dict.add_data(
+            name="us_government_spending_economic_multiplier",
+            data=self.us_government_spending_economic_multiplier,
+        )
         # Economy-related
         data_dict.add_data(
             name="subsidy",
@@ -462,6 +481,21 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
+            name="USGovernmentRevenue",
+            data=self.world.global_state["US Government Revenue"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USGovernmentMandatoryAndDiscretionarySpending",
+            data=self.world.global_state["US Government Mandatory and Discretionary Spending"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USFederalDeficit",
+            data=self.world.global_state["US Federal Deficit"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
             name="USDebt",
             data=self.world.global_state["US Debt"],
             save_copy_and_apply_at_reset=True,
@@ -472,9 +506,18 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
-            name="fed_fund_rate",
+            name="FederalReserveFundRate",
             data=self.world.global_state["Federal Reserve Fund Rate"],
             save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USM2MoneySupply",
+            data=self.world.global_state["US M2 Money Supply"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="us_treasury_yield_long_term",
+            data=self.us_treasury_yield_long_term,
         )
         data_dict.add_data(
             name="postsubsidy_productivity",
@@ -490,17 +533,27 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         )
         data_dict.add_data(
             name="incapacitated",
-            data=np.zeros((self.num_us_states), dtype=self.np_float_dtype),
+            data=np.zeros(self.num_us_states, dtype=self.np_float_dtype),
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
             name="cant_work",
-            data=np.zeros((self.num_us_states), dtype=self.np_float_dtype),
+            data=np.zeros(self.num_us_states, dtype=self.np_float_dtype),
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
             name="num_people_that_can_work",
-            data=np.zeros((self.num_us_states), dtype=self.np_float_dtype),
+            data=np.zeros(self.num_us_states, dtype=self.np_float_dtype),
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="us_gdp",
+            data=self.us_gdp,
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="gdp_per_capita",
+            data=self.gdp_per_capita,
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
@@ -884,10 +937,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             # Add federal government subsidy to productivity
             daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
             postsubsidy_productivity_t = productivity_t - federal_tax_revenue + \
-                                         daily_statewise_subsidy_t * self.us_government_spending_economic_multiplier
+                                         daily_statewise_subsidy_t * self.us_government_spending_economic_multiplier 
             self.world.global_state["Postsubsidy Productivity"][
                 curr_t
-            ] = postsubsidy_productivity_t
+            ] = postsubsidy_productivity_t * self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]
 
             # Update agent state
             # ------------------
@@ -993,7 +1046,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Productivity
         postsubsidy_productivity_t = self.world.global_state[
             "Postsubsidy Productivity"
-        ][self.world.timestep]
+        ][self.world.timestep] 
         
         normalized_postsubsidy_productivity_t = (
             postsubsidy_productivity_t / self.maximum_productivity_t
@@ -1124,11 +1177,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         subsidy_t = self.world.global_state["Subsidy"][self.world.timestep]
         quantitative_t = self.world.global_state["Quantitative"][self.world.timestep]
-        postsubsidy_productivity_t = self.world.global_state[
-            "Postsubsidy Productivity"
-        ][self.world.timestep]  - 0.2 * self.world.global_state[
-            "Total Quantitative"
-        ][self.world.timestep] # replace 0.2 by np.random.randint(4, size = 1) / 20 when we found a good cuda solution
+        postsubsidy_productivity_t = self.world.global_state["Postsubsidy Productivity"][self.world.timestep]
 
         # Health index -- the cost equivalent (annual GDP) of covid deaths
         # Note: casting deaths to float to prevent overflow issues
@@ -1182,9 +1231,27 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             * self.value_of_life
             / self.planner_health_norm
         )
+        # Fiscal Multiplier : https://www.crfb.org/papers/comparing-fiscal-multipliers
+        # 
 
+        # With 42% Debt to GDP, the income will growth around 1.46% per year, 
+        # With 219% Debt to GDP, the income will growth around 1.09% per year,
+        # With the current 100% Debt to GDP, what is the income growth rate?
+        
+        # TODO: Add indicator for default risk via Debt, Debt to GDP, Interest Rate, Deficit, Reserve Balance
+        
+        # Demonstrate that with higher Debt to GDP will lead to slower growth
+        
+        resulting_income_growth_rate = 1.09 + (1.46 - 1.09) * \
+            (self.world.global_state["US Debt"][self.world.timestep]/self.us_gdp * 100 - 219) / (42 - 219)
+            
+        slow_growth_rate = 1.46 - resulting_income_growth_rate;
+        
         # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
-        cost_of_subsidy_t = (1 + self.risk_free_interest_rate) * np.sum(quantitative_t) + (np.sum(subsidy_t) - np.sum(quantitative_t)) * 1.05
+        cost_of_subsidy_t = (1 + self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]) *\
+                            np.sum(quantitative_t) + (np.sum(subsidy_t) - np.sum(quantitative_t)) * \
+                            (1 + self.us_treasury_yield_long_term) + self.us_gdp * slow_growth_rate
+
         # Use a "crra" nonlinearity on the planner economic reward
         marginal_planner_economic_index = crra_nonlinearity(
             (np.sum(postsubsidy_productivity_t) - cost_of_subsidy_t)
@@ -1275,11 +1342,21 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         # All US states start with zero subsidy and zero Postsubsidy Productivity
         self.set_global_state("Subsidy Quantitative Policy Level", dtype=self.np_float_dtype)
-        self.set_global_state("Quantitative Level", dtype=self.np_float_dtype)
+        self.set_global_state("US Debt", dtype=self.np_float_dtype, value=self.us_government_debt)
+        self.set_global_state("Federal Reserve Balance Sheet", value=self.fed_reserve_balance_sheet)
+        self.set_global_state("Federal Reserve Fund Rate", value=self.risk_free_interest_rate)
+        self.set_global_state("US M2 Money Supply", value=self.us_M2_money_supply)
+        self.set_global_state("US Government Revenue", value=self.us_government_revenue, 
+                              dtype=self.np_float_dtype)
+        self.set_global_state("US Government Mandatory and Discretionary Spending", 
+                              value=self.us_government_mandatory_and_discretionary_spending,
+                              dtype=self.np_float_dtype)
+        self.set_global_state("US Federal Deficit", value=self.us_federal_deficit,
+                              dtype=self.np_float_dtype)
+        
         self.set_global_state("Quantitative", dtype=self.np_float_dtype)
         self.set_global_state("Subsidy", dtype=self.np_float_dtype)
         self.set_global_state("Postsubsidy Productivity", dtype=self.np_float_dtype)
-
         # Set initial agent states
         # ------------------------
         current_date_string = datetime.strftime(
@@ -1356,8 +1433,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "Vaccinated",
             "Stringency Level",
             "Subsidy Quantitative Policy Level",
+            "US Debt",
+            "Federal Reserve Balance Sheet",
+            "Federal Reserve Fund Rate",
+            "US M2 Money Supply", 
+            "US Government Revenue", 
+            "US Government Mandatory and Discretionary Spending", 
+            "US Federal Deficit",
             "Subsidy",
-            "Quantitative Level",
             "Quantitative",
             "Postsubsidy Productivity",
         ]
