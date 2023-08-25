@@ -52,12 +52,16 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
     required_entities = []
     agent_subclasses = ["BasicMobileAgent"]
 
+    # Covid-19 lockdown has effected the economy, so we need to add a reduction multiplier to the GDP
+    # Assume at max level of stringency - level 10, the GDP is reduced by 30%, so each level increases 
+    # will increase the GDP reduction multiplier by 3%
+
     def __init__(
         self,
         *base_component_args,
         n_stringency_levels=10,
         action_cooldown_period=28,
-        reduced_gdp_multiplier=0.3,
+        reduced_gdp_multiplier=0.03,
         **base_component_kwargs,
     ):
 
@@ -153,7 +157,6 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
     def component_step(self):
         if self.world.use_cuda:
             self.world.cuda_component_step[self.name](
-                self.world.cuda_data_manager.device_data("reduced_gdp_multiplier"),
                 self.world.cuda_data_manager.device_data("stringency_level"),
                 self.world.cuda_data_manager.device_data("action_cooldown_period"),
                 self.world.cuda_data_manager.device_data("action_in_cooldown_until"),
@@ -286,9 +289,8 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
         self,
         *base_component_args,
         subsidy_quantitative_policy_interval=90,
-        num_subsidy_quantitative_policy_level=42,
+        num_subsidy_quantitative_policy_level=40,
         max_annual_monetary_unit_per_person=20000,
-        relation_between_M2_and_Fed_Policies=0.92,
         **base_component_kwargs,
     ):
         self.subsidy_quantitative_policy_interval = int(subsidy_quantitative_policy_interval)
@@ -304,7 +306,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
 
         # (This will be overwritten during component_step; see below)
         self._subsidy_amount_per_level = None
-        self._subsidy_level_array = None
+        self._subsidy_quantitative_policy_level_array = None
 
         super().__init__(*base_component_args, **base_component_kwargs)
 
@@ -393,6 +395,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
     def component_step(self):
         if self.world.use_cuda:
             self.world.cuda_component_step[self.name](
+                self.world.cuda_data_manager.device_data("subsidy_quantitative_policy_level"),
                 self.world.cuda_data_manager.device_data("subsidy"),
                 self.world.cuda_data_manager.device_data("subsidy_quantitative_policy_interval"),
                 self.world.cuda_data_manager.device_data("num_subsidy_quantitative_policy_level"),
@@ -405,18 +408,19 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     f"{_OBSERVATIONS}_a_{self.name}-t_until_next_subsidy"
                 ),
                 self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_a_{self.name}-current_subsidy_level"
+                    f"{_OBSERVATIONS}_a_{self.name}-current_subsidy_quantitative_policy_level"
                 ),
                 self.world.cuda_data_manager.device_data(
                     f"{_OBSERVATIONS}_p_{self.name}-t_until_next_subsidy"
                 ),
                 self.world.cuda_data_manager.device_data(
-                    f"{_OBSERVATIONS}_p_{self.name}-current_subsidy_level"
+                    f"{_OBSERVATIONS}_p_{self.name}-current_subsidy_quantitative_policy_level"
                 ),
                 self.world.cuda_data_manager.device_data(
                     f"{_OBSERVATIONS}_p_action_mask"
                 ),
                 self.world.cuda_data_manager.device_data("_timestep_"),
+                self.world.cuda_data_manager.device_data("quantitative"),
                 self.world.cuda_data_manager.meta_info("n_agents"),
                 self.world.cuda_data_manager.meta_info("episode_length"),
                 block=self.world.cuda_function_manager.block,
@@ -432,68 +436,56 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                         * self.subsidy_quantitative_policy_interval
                         / 365
                     )
-                    self._subsidy_level_array = np.zeros((self._episode_length + 1))
+                    self._subsidy_quantitative_policy_level_array = np.zeros((self._episode_length + 1))
                 # Use the action taken in the previous timestep
                 current_subsidy_amount = self.world.real_world_subsidy[
                     self.world.timestep - 1
                 ]
                 if current_subsidy_amount > 0:
-                    _subsidy_level = np.round(
+                    _subsidy_quantitative_policy_level = np.round(
                         (current_subsidy_amount / self._subsidy_amount_per_level)
                     )
                     for t_idx in range(
                         self.world.timestep - 1,
                         min(
-                            len(self._subsidy_level_array),
+                            len(self._subsidy_quantitative_policy_level_array),
                             self.world.timestep - 1 + self.subsidy_quantitative_policy_interval,
                         ),
                     ):
-                        self._subsidy_level_array[t_idx] += _subsidy_level
-                num_subsidy_quantitative_policy_level = self._subsidy_level_array[self.world.timestep - 1]
+                        self._subsidy_quantitative_policy_level_array[t_idx] += _subsidy_quantitative_policy_level
+                subsidy_quantitative_policy_level = self._subsidy_quantitative_policy_level_array[self.world.timestep - 1]
             else:
                 # Update the subsidy level only every self.subsidy_quantitative_policy_interval, since the
                 # other actions are masked out.
                 if (self.world.timestep - 1) % self.subsidy_quantitative_policy_interval == 0:
-                    num_subsidy_quantitative_policy_level = self.world.planner.get_component_action(self.name)
+                    subsidy_quantitative_policy_level = self.world.planner.get_component_action(self.name)
                 else:
-                    num_subsidy_quantitative_policy_level = self.world.planner.state["Current Subsidy Quantitative Policy Level"]
+                    subsidy_quantitative_policy_level = self.world.planner.state["Current Subsidy Quantitative Policy Level"]
 
-            assert 0 <= num_subsidy_quantitative_policy_level <= self.num_subsidy_quantitative_policy_level
+            assert 0 <= subsidy_quantitative_policy_level <= self.num_subsidy_quantitative_policy_level
             self.world.planner.state["Current Subsidy Quantitative Policy Level"] = np.array(
-                num_subsidy_quantitative_policy_level
+                subsidy_quantitative_policy_level
             ).astype(self.np_int_dtype)
 
             # Update subsidy - quantitative easing level
-            if num_subsidy_quantitative_policy_level <= self.num_subsidy_quantitative_policy_level / 2 :
-                subsidy_level_frac = num_subsidy_quantitative_policy_level / self.num_subsidy_quantitative_policy_level / 2
+            if subsidy_quantitative_policy_level <= self.num_subsidy_quantitative_policy_level / 2 :
+                subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level / self.num_subsidy_quantitative_policy_level / 2
                 daily_statewise_subsidy = (
-                subsidy_level_frac * self.max_daily_subsidy_per_state
+                subsidy_quantitative_policy_level_frac * self.max_daily_subsidy_per_state
                 )
 
                 self.world.global_state["Subsidy"][
                     self.world.timestep
                 ] = daily_statewise_subsidy
                 self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
-                self.world.global_state["US Federal Deficit"][
-                    self.world.timestep
-                ] = self.world.global_state["US Government Revenue"][
-                    self.world.timestep
-                ] - self.world.global_state["US Government Mandatory and Discretionary Spending"][
-                    self.world.timestep
-                ] - daily_statewise_subsidy;
-                self.world.global_state["US Debt"][
-                    self.world.timestep
-                ] += self.world.global_state["US Federal Deficit"][
-                    self.world.timestep
-                ]
+
             # quantitative easing action - only increase the self.world.global_state["Quantitative"]
             # value where level 20 to 30 is the quantitative tightening action, from 31 to 40 is the quantitative easing action
-            elif num_subsidy_quantitative_policy_level > self.num_subsidy_quantitative_policy_level / 2 \
-            & num_subsidy_quantitative_policy_level <= self.num_subsidy_quantitative_policy_level:
-                quantitative_level_frac = (num_subsidy_quantitative_policy_level -
+            else:
+                quantitative_level_frac = (subsidy_quantitative_policy_level -
                                            self.num_subsidy_quantitative_policy_level / 2) /\
                                           self.num_subsidy_quantitative_policy_level / 2
-                if num_subsidy_quantitative_policy_level < 30:
+                if subsidy_quantitative_policy_level < 30:
                     quantitative_level_frac = -1 * quantitative_level_frac
 
 
@@ -502,44 +494,31 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                 )
                 self.world.global_state["Quantitative"][
                     self.world.timestep
-                ] = daily_statewise_quantitative 
-                self.world.global_state["Federal Reserve Balance Sheet"] += np.sum(daily_statewise_quantitative)
-                self.world.global_state["US Federal Deficit"][
-                    self.world.timestep
-                ] -=\
-                    self.world.global_state["Federal Reserve Balance Sheet"] * self.world.global_state["Federal Reserve Fund Rate"][
-                    self.world.timestep
-                ]
-                
-            else:
-                # To map the numbers 41 and 42 to -1 and 1, respectively, you can use a linear 
-                # transformation function. Here's a step-by-step approach to create the function:
+                ] = daily_statewise_quantitative
+                self.world.global_state["Federal Reserve Balance Sheet"] += np.sum(daily_statewise_quantitative) 
+            # else:
+            #     # To map the numbers 41 and 42 to -1 and 1, respectively, you can use a linear
+            #     # transformation function. Here's a step-by-step approach to create the function:
 
-                # Assume the function to be y = m * x + b, where x is the input number, 
-                # m is the slope of the line, b is the y-intercept, and y is the corresponding output.
+            #     # Assume the function to be y = m * x + b, where x is the input number,
+            #     # m is the slope of the line, b is the y-intercept, and y is the corresponding output.
 
-                # We have two pairs of inputs and outputs: (41, -1) and (42, 1). 
-                # Substitute these in the function to get two equations with m and b:
-                # Solve the linear system to find the values of m and b:
-                # By subtracting the first equation from the second equation: 2 = m
+            #     # We have two pairs of inputs and outputs: (41, -1) and (42, 1).
+            #     # Substitute these in the function to get two equations with m and b:
+            #     # Solve the linear system to find the values of m and b:
+            #     # By subtracting the first equation from the second equation: 2 = m
 
-                # Now that we have m = 2, substitute it into one of the equations 
-                # (choose the first one) to find b: -1 = 41 * 2 + b || -1 = 82 + b --> b = -83
+            #     # Now that we have m = 2, substitute it into one of the equations
+            #     # (choose the first one) to find b: -1 = 41 * 2 + b || -1 = 82 + b --> b = -83
 
-                # The linear transformation function is now defined as y = 2 * x - 83
-                
-                decrease_or_increase = num_subsidy_quantitative_policy_level * 2 - 83
-                self.world.global_state["Federal Reserve Fund Rate"][
-                    self.world.timestep] += decrease_or_increase * 0.5/100
-            #  A 2019 study by Congressional Budget Office (CBO) economists Edward Gamber and 
-            #  John Seliski found that every 10 percent increase in the debt-to-GDP ratio translates into 
-            #  a 0.2 to 0.3 percentage point increase in interest rates  -- https://www.crfb.org/papers/risks-and-threats-deficits-and-debt
-            
-            self.world.global_state["Federal Reserve Fund Rate"][
-                self.world.timestep
-            ] = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep - 1] + \
-                self.world.global_state["US Federal Deficit"][self.world.timestep] / \
-                    self.world.global_state["US Debt"][ self.world.timestep] * 0.2 / 10 / 100
+            #     # The linear transformation function is now defined as y = 2 * x - 83
+
+            #     decrease_or_increase = num_subsidy_quantitative_policy_level * 2 - 83
+                # Make the code above shorter
+            # self.world.global_state["Federal Reserve Fund Rate"][
+            #     self.world.timestep] = self.world.global_state["Federal Reserve Fund Rate"][
+            #     self.world.timestep] * (1 + decrease_or_increase * 0.5/100)
+
 
 
     def generate_observations(self):
@@ -550,18 +529,18 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
         t_until_next_subsidy = self.subsidy_quantitative_policy_interval - t_since_last_subsidy
         t_vec = t_until_next_subsidy * np.ones(self.n_agents)
 
-        current_subsidy_level = self.world.planner.state["Current Subsidy Quantitative Policy Level"]
-        sl_vec = current_subsidy_level * np.ones(self.n_agents)
+        current_subsidy_quantitative_policy_level = self.world.planner.state["Current Subsidy Quantitative Policy Level"]
+        sl_vec = current_subsidy_quantitative_policy_level * np.ones(self.n_agents)
 
         # Normalized observations
         obs_dict = dict()
         obs_dict["a"] = {
             "t_until_next_subsidy": t_vec / self.subsidy_quantitative_policy_interval,
-            "current_subsidy_level": sl_vec / self.num_subsidy_quantitative_policy_level,
+            "current_subsidy_quantitative_policy_level": sl_vec / self.num_subsidy_quantitative_policy_level,
         }
         obs_dict[self.world.planner.idx] = {
             "t_until_next_subsidy": t_until_next_subsidy / self.subsidy_quantitative_policy_interval,
-            "current_subsidy_level": current_subsidy_level / self.num_subsidy_quantitative_policy_level,
+            "current_subsidy_quantitative_policy_level": current_subsidy_quantitative_policy_level / self.num_subsidy_quantitative_policy_level,
         }
 
         return obs_dict

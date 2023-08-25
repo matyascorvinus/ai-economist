@@ -105,6 +105,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         pop_between_age_18_65=0.6,
         infection_too_sick_to_work_rate=0.1,
         risk_free_interest_rate=0.5/100,
+        fed_fund_rate_01_2020=2.16/100,
+        inflation_cpi_2019=0.017,
         economic_reward_crra_eta=2,
         health_priority_scaling_agents=1,
         health_priority_scaling_planner=1,
@@ -273,7 +275,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Economy-related
         # Interest rate for borrowing money from the federal reserve
         self.risk_free_interest_rate = self.np_float_dtype(risk_free_interest_rate)
-        self.fed = self.np_float_dtype(risk_free_interest_rate)
+        self.inflation_cpi_2019 = self.np_float_dtype(inflation_cpi_2019)
+        self.fed_fund_rates = self.np_float_dtype(fed_fund_rate_01_2020)
         self.us_treasury_yield_long_term = self.np_float_dtype(us_treasury_yield_long_term)
         self.us_government_debt = self.np_float_dtype(us_government_debt)
         self.fed_reserve_balance_sheet = self.np_float_dtype(fed_reserve_balance_sheet)
@@ -328,13 +331,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.us_government_revenue = (
             self.us_population * self.gdp_per_capita * self.us_tax_wedge
         )
-        self.us_gdp = self.us_population * self.gdp_per_capita
+        self.us_gdp_2019 = self.us_population * self.gdp_per_capita
         # 2019 US government spending was $4.4 trillion,
         # according to the Congressional Budget Office. https://www.cbo.gov/publication/56324
         self.us_government_mandatory_and_discretionary_spending = \
-            us_government_mandatory_and_discretionary_spending;
+            us_government_mandatory_and_discretionary_spending
         self.us_federal_deficit = self.us_government_mandatory_and_discretionary_spending \
-            - self.us_government_revenue;
+            - self.us_government_revenue
         # Economic reward non-linearity
         self.economic_reward_crra_eta = self.np_float_dtype(economic_reward_crra_eta)
         assert 0.0 <= self.economic_reward_crra_eta < 20.0
@@ -460,13 +463,17 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
-            name="num_subsidy_quantitative_policy_level",
+            name="subsidy_quantitative_policy_level",
             data=self.world.global_state["Subsidy Quantitative Policy Level"].astype(self.np_int_dtype),
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
             name="us_government_spending_economic_multiplier",
             data=self.us_government_spending_economic_multiplier,
+        )
+        data_dict.add_data(
+            name="us_tax_wedge",
+            data=self.us_tax_wedge,
         )
         # Economy-related
         data_dict.add_data(
@@ -511,8 +518,23 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
+            name="Inflation",
+            data=self.world.global_state["Inflation"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="ReducedGDPMultiplier",
+            data=self.world.global_state["Reduced GDP Multiplier"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
             name="USM2MoneySupply",
             data=self.world.global_state["US M2 Money Supply"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="US GDP",
+            data=self.world.global_state["US GDP"],
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
@@ -547,8 +569,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
-            name="us_gdp",
-            data=self.us_gdp,
+            name="us_gdp_2019",
+            data=self.us_gdp_2019,
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
@@ -713,6 +735,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             data=self.risk_free_interest_rate,
         )
         data_dict.add_data(
+            name="inflation_cpi_2019",
+            data=self.inflation_cpi_2019,
+        )
+        data_dict.add_data(
             name="agents_health_norm",
             data=self.agents_health_norm,
         )
@@ -746,7 +772,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         and vaccination numbers based on the SIR equations
         - unemployment_step() - uses the unemployment model to updates the unemployment
          based on the stringency levels
-        - economy_step - computes the current producitivity numbers for the agents
+        - economy_step - computes the current productivity numbers for the agents
         """
         if self.use_cuda:
             self.cuda_step(
@@ -757,7 +783,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("vaccinated"),
                 self.cuda_data_manager.device_data("unemployed"),
                 self.cuda_data_manager.device_data("subsidy"),
-                self.cuda_data_manager.device_data("quantitative"),
                 self.cuda_data_manager.device_data("productivity"),
                 self.cuda_data_manager.device_data("stringency_level"),
                 self.cuda_data_manager.device_data("num_stringency_levels"),
@@ -810,9 +835,19 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 ),
                 self.cuda_data_manager.device_data(f"{_OBSERVATIONS}_p_time"),
                 self.cuda_data_manager.device_data("_timestep_"),
+                self.cuda_data_manager.device_data("quantitative"),
+                self.cuda_data_manager.device_data("ReducedGDPMultiplier"), 
+                self.cuda_data_manager.device_data("USFederalDeficit"), 
+                self.cuda_data_manager.device_data("USGovernmentRevenue"), 
+                self.cuda_data_manager.device_data("USGovernmentMandatoryAndDiscretionarySpending"), 
+                self.cuda_data_manager.device_data("USDebt"), 
+                self.cuda_data_manager.device_data("Inflation"), 
+                self.cuda_data_manager.device_data("FederalReserveBalanceSheet"), 
+                self.cuda_data_manager.device_data("FederalReserveFundRate"), 
+                self.cuda_data_manager.device_data("us_government_spending_economic_multiplier"), 
+                self.cuda_data_manager.device_data("us_tax_wedge"), 
                 self.cuda_data_manager.meta_info("n_agents"),
                 self.cuda_data_manager.meta_info("episode_length"),
-                self.cuda_data_manager.device_data("USDebt"), 
                 block=self.world.cuda_function_manager.block,
                 grid=self.world.cuda_function_manager.grid,
             )
@@ -918,6 +953,35 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
             self.world.global_state["Unemployed"][curr_t] = num_unemployed_t
 
+            # Fiscal Multiplier : https://www.crfb.org/papers/comparing-fiscal-multipliers
+
+            # So basically QE is a way to manage government debt
+
+            # Demonstrate that with higher Debt to GDP will lead to slo wer growth
+
+            # A better way to understand QE is to view it as debt management, overriding the Treasury. The Treasury would issue a mix of long-term debt and short-term debt.
+            # By buying the long-term debt and financing it with short-term borrowing, the Fed was converting the Treasury’s long-term debt into short-term debt.
+            #         Sure, let's break down this process:
+            #           1. Issuance of Debt by the Treasury: The U.S. Treasury issues both short-term and long-term debt to finance government operations.
+            #           Short-term debt typically comes in the form of Treasury bills (T-bills) with maturities of one year or less, while long-term debt includes
+            #           Treasury notes and bonds with maturities ranging from 2 to 30 years.
+
+            #           2. Purchase of Long-Term Debt by the Fed: As part of its Quantitative Easing (QE) program,
+            #           the Federal Reserve buys long-term Treasury bonds on the open market. This increases the demand for those bonds, which pushes up their prices and
+            #           lowers their yields (interest rates).
+
+            #           3. Financing the Purchase with Short-Term Borrowing: The Fed doesn't use its own money to buy these bonds.
+            #           Instead, it essentially creates new money by crediting the reserve accounts of the banks from which it buys the bonds.
+            #           These reserves are effectively short-term liabilities of the Fed, because banks can demand payment for them at any time.
+
+            #           4. Effect on the Composition of Government Debt: By buying long-term bonds and financing them with short-term liabilities,
+            #           the Fed is effectively converting long-term government debt into short-term debt. From the perspective of the rest of the economy, instead of holding long-term Treasury bonds, they now hold short-term claims on the Fed (in the form of bank reserves).
+            #
+            #         This process can influence interest rates across the yield curve and affect the economy in various ways.
+            #         For example, by lowering long-term interest rates, QE can stimulate economic activity by making it cheaper for businesses and households to borrow and invest.
+            #         On the other hand, by increasing the amount of short-term liabilities,
+            #         it can also increase the sensitivity of the government's fiscal position to changes in short-term interest rates.
+
             # Productivity
             # ------------
             productivity_t = self.economy_step(
@@ -928,19 +992,92 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 infection_too_sick_to_work_rate=self.infection_too_sick_to_work_rate,
                 population_between_age_18_65=self.pop_between_age_18_65,
             )
+            # Current GDP after calculating the death rate
+            self.world.global_state["US GDP"][
+                curr_t
+            ] = (np.sum(self.us_state_population) - np.sum(_D_t)) * self.gdp_per_capita
 
-            federal_tax_revenue = (
-                productivity_t * self.us_tax_wedge
-            )
+            # Federal tax revenue
+            # federal_tax_revenue = (
+            #     productivity_t * self.us_tax_wedge
+            # )
+
+            # Considered the tax revenue is attached with the productivity
+            federal_tax_revenue = self.world.global_state["US GDP"][
+                                      curr_t
+                                  ]  * self.us_tax_wedge
+            self.world.global_state["US Government Revenue"][
+                self.world.timestep
+            ] = federal_tax_revenue
             # Subsidies
             # ---------
             # Add federal government subsidy to productivity
             daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
-            postsubsidy_productivity_t = productivity_t - federal_tax_revenue + \
-                                         daily_statewise_subsidy_t * self.us_government_spending_economic_multiplier 
+            postsubsidy_productivity_t = productivity_t + \
+                                         daily_statewise_subsidy_t * \
+                                            self.us_government_spending_economic_multiplier
             self.world.global_state["Postsubsidy Productivity"][
                 curr_t
-            ] = postsubsidy_productivity_t * self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]
+            ] = postsubsidy_productivity_t * \
+               (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep])
+            # minus sign here is because the Deficit is positive, and vice versa, plus sign meant we have Surplus
+            federal_interest_payment = self.world.global_state["US Federal Debt"][
+                self.world.timestep
+            ] * self.world.global_state["Federal Reserve Fund Rate"][
+                self.world.timestep
+            ]
+            self.world.global_state["US Federal Deficit"][
+                self.world.timestep
+            ] = federal_tax_revenue - self.world.global_state["US Government Mandatory and Discretionary Spending"][
+                self.world.timestep
+            ] - np.sum(daily_statewise_subsidy_t)
+            self.world.global_state["US Debt"][
+                self.world.timestep + 1
+            ] = self.world.global_state["US Debt"][
+                self.world.timestep
+            ] + self.world.global_state["US Federal Deficit"][
+                self.world.timestep
+            ]
+
+            federal_real_primary_surplus = self.world.global_state["US Federal Deficit"][
+                self.world.timestep
+            ] - federal_interest_payment
+
+            # A 2019 study by Congressional Budget Office (CBO) economists Edward Gamber and
+            # John Seliski found that every 10 percent increase in the debt-to-GDP ratio translates into
+            # a 0.2 to 0.3 percentage point increase in interest rates
+            # -- https://www.crfb.org/papers/risks-and-threats-deficits-and-debt
+            # If inflation larger than 3%, then the Federal Reserve will increase the interest rate
+
+
+            self.world.global_state["Inflation"][
+                self.world.timestep + 1
+            ] = self.world.global_state["Inflation"][
+                self.world.timestep
+            ] + 0.1 * np.sum(daily_statewise_subsidy_t) / pow(10, 11)
+
+
+            # Federal Reserve Fund Rate
+
+            # TODO: Add indicator for default risk via Debt, Debt to GDP, Interest Rate, Deficit, Reserve Balance
+            # https://johnhcochrane.blogspot.com/2020/07/the-surplus-process.html
+            # \frac{B_{t-1}}{P_{t}}=b_{t}=E_{t}\sum_{j=0}^{\infty}\beta^{j}s_{t+j}.
+            #             b_t = B_t_minus_1 / P_t
+            #             discount_factor = 0.95  # assume beta = 0.95
+            #             expected_sum = 0.0
+            #
+            #             for j in range(0, infinity):
+            #               expected_sum += discount_factor ** j     * s_t_plus_j
+            #
+            #            b_t = expected_sum * b_t
+            # b_t is the expected discounted sum of future surpluses
+            #  TODO: Calculate the primary surplus - which is s_t_plus_j - current primary surplus and
+            #   the sum of the past primary surpluses and the discount_factor equals 1 / fed_fund_rate
+            if self.world.global_state["Inflation"][self.world.timestep] * 100 > 0.03:
+                self.world.global_state["Federal Reserve Fund Rate"][
+                    self.world.timestep
+                ] = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep - 1] + 0.05 / 100
+
 
             # Update agent state
             # ------------------
@@ -1101,7 +1238,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data(f"{_REWARDS}_p"),
                 self.cuda_data_manager.device_data("num_days_in_an_year"),
                 self.cuda_data_manager.device_data("value_of_life"),
-                self.cuda_data_manager.device_data("risk_free_interest_rate"),
+                self.cuda_data_manager.device_data("risk_free_interest_rate"), 
                 self.cuda_data_manager.device_data("economic_reward_crra_eta"),
                 self.cuda_data_manager.device_data("min_marginal_agent_health_index"),
                 self.cuda_data_manager.device_data("max_marginal_agent_health_index"),
@@ -1134,9 +1271,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.cuda_data_manager.device_data("deaths"),
                 self.cuda_data_manager.device_data("subsidy"),
                 self.cuda_data_manager.device_data("postsubsidy_productivity"),
-                self.cuda_data_manager.device_data("quantitative"),
                 self.cuda_data_manager.device_data("_done_"),
                 self.cuda_data_manager.device_data("_timestep_"),
+                self.cuda_data_manager.device_data("quantitative"),
+                self.cuda_data_manager.device_data("USDebt"),
+                self.cuda_data_manager.device_data("FederalReserveFundRate"),
                 self.cuda_data_manager.meta_info("n_agents"),
                 self.cuda_data_manager.meta_info("episode_length"),
                 block=self.world.cuda_function_manager.block,
@@ -1231,26 +1370,21 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             * self.value_of_life
             / self.planner_health_norm
         )
-        # Fiscal Multiplier : https://www.crfb.org/papers/comparing-fiscal-multipliers
-        # 
 
-        # With 42% Debt to GDP, the income will growth around 1.46% per year, 
+        # With 42% Debt to GDP, the income will growth around 1.46% per year,
         # With 219% Debt to GDP, the income will growth around 1.09% per year,
         # With the current 100% Debt to GDP, what is the income growth rate?
-        
-        # TODO: Add indicator for default risk via Debt, Debt to GDP, Interest Rate, Deficit, Reserve Balance
-        
-        # Demonstrate that with higher Debt to GDP will lead to slower growth
-        
         resulting_income_growth_rate = 1.09 + (1.46 - 1.09) * \
-            (self.world.global_state["US Debt"][self.world.timestep]/self.us_gdp * 100 - 219) / (42 - 219)
+            (self.world.global_state["US Debt"][self.world.timestep]/self.world.global_state["US GDP"][self.world.timestep] * 100 - 219) / (42 - 219)
             
         slow_growth_rate = 1.46 - resulting_income_growth_rate;
         
         # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
         cost_of_subsidy_t = (1 + self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]) *\
                             np.sum(quantitative_t) + (np.sum(subsidy_t) - np.sum(quantitative_t)) * \
-                            (1 + self.us_treasury_yield_long_term) + self.us_gdp * slow_growth_rate
+                            (1 + self.us_treasury_yield_long_term) + self.world.global_state["US GDP"][
+                                self.world.timestep
+                            ]  * slow_growth_rate
 
         # Use a "crra" nonlinearity on the planner economic reward
         marginal_planner_economic_index = crra_nonlinearity(
@@ -1344,14 +1478,19 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.set_global_state("Subsidy Quantitative Policy Level", dtype=self.np_float_dtype)
         self.set_global_state("US Debt", dtype=self.np_float_dtype, value=self.us_government_debt)
         self.set_global_state("Federal Reserve Balance Sheet", value=self.fed_reserve_balance_sheet)
-        self.set_global_state("Federal Reserve Fund Rate", value=self.risk_free_interest_rate)
+        self.set_global_state("Federal Reserve Fund Rate", value=self.fed_fund_rates)
+        self.set_global_state("Inflation", value=self.inflation_cpi_2019)
         self.set_global_state("US M2 Money Supply", value=self.us_M2_money_supply)
+        self.set_global_state("US GDP", value=self.us_gdp_2019)
         self.set_global_state("US Government Revenue", value=self.us_government_revenue, 
                               dtype=self.np_float_dtype)
         self.set_global_state("US Government Mandatory and Discretionary Spending", 
                               value=self.us_government_mandatory_and_discretionary_spending,
                               dtype=self.np_float_dtype)
         self.set_global_state("US Federal Deficit", value=self.us_federal_deficit,
+                              dtype=self.np_float_dtype)
+        # Reduced GDP Multiplier, 0.0 means no reduction
+        self.set_global_state("Reduced GDP Multiplier", value=0.0,
                               dtype=self.np_float_dtype)
         
         self.set_global_state("Quantitative", dtype=self.np_float_dtype)
@@ -1436,6 +1575,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "US Debt",
             "Federal Reserve Balance Sheet",
             "Federal Reserve Fund Rate",
+            "Inflation",
             "US M2 Money Supply", 
             "US Government Revenue", 
             "US Government Mandatory and Discretionary Spending", 

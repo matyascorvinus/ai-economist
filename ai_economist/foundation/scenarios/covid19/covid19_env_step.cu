@@ -204,7 +204,9 @@ extern "C" {
         float* postsubsidy_productivity,
         int timestep,
         const int kArrayIdxCurrentTime,
-        int kTimeIndependentArrayIdx
+        int kTimeIndependentArrayIdx,
+        float federal_tax_revenue,
+        float us_government_spending_economic_multiplier
     ) {
         incapacitated[kTimeIndependentArrayIdx] =
             kInfectionTooSickToWorkRate * infected[kArrayIdxCurrentTime] +
@@ -222,7 +224,8 @@ extern "C" {
 
         postsubsidy_productivity[kArrayIdxCurrentTime] =
             productivity[kArrayIdxCurrentTime] +
-            subsidy[kArrayIdxCurrentTime];
+            subsidy[kArrayIdxCurrentTime] *
+             (1 + us_government_spending_economic_multiplier) - federal_tax_revenue;
     }
 
     // CUDA version of crra_nonlinearity() in
@@ -278,8 +281,7 @@ extern "C" {
         float* deaths,
         float* vaccinated,
         float* unemployed,
-        float* subsidy,
-        float* quantitative,
+        float* subsidy, 
         float* productivity,
         int* stringency_level,
         const int kNumStringencyLevels,
@@ -316,6 +318,17 @@ extern "C" {
         float* obs_p_world_lagged_stringency_level,
         float* obs_p_time,
         int * env_timestep_arr,
+        float* quantitative,
+        float* ReducedGDPMultiplier, 
+        float* USFederalDeficit, 
+        float* USGovernmentRevenue, 
+        float* USGovernmentMandatoryAndDiscretionarySpending, 
+        float* USDebt, 
+        float* Inflation, 
+        float* FederalReserveBalanceSheet, 
+        float* FederalReserveFundRate, 
+        float us_government_spending_economic_multiplier, 
+        float kUSTaxWedge, 
         const int kNumAgents,
         const int kEpisodeLength
     ) {
@@ -386,6 +399,10 @@ extern "C" {
                 kArrayIdxCurrentTime,
                 kArrayIdxPrevTime);
 
+            // float federal_tax_revenue = (
+            //     productivity[kArrayIdxCurrentTime] * kUSTaxWedge
+            // );
+
             cuda_economy_step(
                 infected,
                 deaths,
@@ -402,8 +419,41 @@ extern "C" {
                 postsubsidy_productivity,
                 env_timestep_arr[kEnvId],
                 kArrayIdxCurrentTime,
-                kTimeIndependentArrayIdx);
+                kTimeIndependentArrayIdx,
+                USGovernmentRevenue[kArrayIdxCurrentTime],
+                us_government_spending_economic_multiplier
+            ); 
 
+
+            postsubsidy_productivity[kArrayIdxCurrentTime] =
+                postsubsidy_productivity[kArrayIdxCurrentTime] 
+                * ReducedGDPMultiplier[kArrayIdxCurrentTime];
+
+            Inflation[kArrayIdxCurrentTime + 1] = Inflation[kArrayIdxCurrentTime] + 
+                0.1 * subsidy[kArrayIdxCurrentTime] / pow(10, 11);
+
+            float inflation_multiplier = 0.0;
+            if (Inflation[kArrayIdxCurrentTime] > 0.05) {
+                inflation_multiplier = 0.5 / 100;
+            }
+            float debt_effect_multiplier = (
+                USDebt[kArrayIdxCurrentTime] - USDebt[kArrayIdxCurrentTime - 1]
+            ) / USDebt[kArrayIdxCurrentTime - 1] * 100 / 10 * 0.2 / 100;
+
+            FederalReserveFundRate[kArrayIdxCurrentTime] = 
+                FederalReserveFundRate[kArrayIdxCurrentTime - 1] + 
+                debt_effect_multiplier + inflation_multiplier;
+            
+            USFederalDeficit[kArrayIdxCurrentTime] =
+                USGovernmentRevenue[kArrayIdxCurrentTime] - 
+                USGovernmentMandatoryAndDiscretionarySpending[kArrayIdxCurrentTime] - 
+                subsidy[kArrayIdxCurrentTime];
+            
+            USFederalDeficit[kArrayIdxCurrentTime] -=
+                FederalReserveBalanceSheet[kArrayIdxCurrentTime] *
+                FederalReserveFundRate[kArrayIdxCurrentTime];
+
+            USDebt[kArrayIdxCurrentTime] += USFederalDeficit[kArrayIdxCurrentTime];
             // CUDA version of generate observations
             // Agents' observations
             int kFeatureArrayIndexOffset = kEnvId * kNumFeatures *

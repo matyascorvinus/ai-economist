@@ -113,7 +113,7 @@ extern "C" {
     }
 
     __global__ void CudaFederalGovernmentSubsidyAndQuantitativePoliciesStep(
-        int * num_subsidy_quantitative_policy_level,
+        int * subsidy_quantitative_policy_level,
         float * subsidy,
         const int kSubsidyInterval,
         const int kNumSubsidyLevels,
@@ -122,11 +122,12 @@ extern "C" {
         const int * kNoOpPlannerActionMask,
         int * actions,
         float * obs_a_time_until_next_subsidy,
-        float * obs_a_current_subsidy_level,
+        float * obs_a_current_subsidy_quantitative_policy_level,
         float * obs_p_time_until_next_subsidy,
-        float * obs_p_current_subsidy_level,
+        float * obs_p_current_subsidy_quantitative_policy_level,
         float * obs_p_action_mask,
         int * env_timestep_arr,
+        float * quantitative,
         const int kNumAgents,
         const int kEpisodeLength
     ) {
@@ -158,25 +159,37 @@ extern "C" {
 
             if ((env_timestep_arr[kEnvId] - 1) % kSubsidyInterval == 0) {
                 assert(0 <= actions[kEnvId] <= kNumSubsidyLevels);
-                num_subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] =
+                subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] =
                     actions[kEnvId];
             } else {
-                num_subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] =
-                    num_subsidy_quantitative_policy_level[time_dependent_array_index_prev_t];
+                subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] =
+                    subsidy_quantitative_policy_level[time_dependent_array_index_prev_t];
             }
             // Setting the subsidies for the US states
             // based on the federal government's subsidy level
-            subsidy[time_dependent_array_index_curr_t] =
-                num_subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] *
-                KMaxDailySubsidyPerState[kAgentId] / kNumSubsidyLevels;
+            if(subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] 
+                <= kNumSubsidyLevels / 2) {
+                subsidy[time_dependent_array_index_curr_t] =
+                    subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] *
+                    KMaxDailySubsidyPerState[kAgentId] / kNumSubsidyLevels;
+            } else {
+                float quantitative_level_frac = (subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] -
+                                           kNumSubsidyLevels / 2) / kNumSubsidyLevels / 2;
+                if(subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] < 30) {
+                    quantitative_level_frac = -1 * quantitative_level_frac;
+                }
+                quantitative[time_dependent_array_index_curr_t] =
+                    subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] *
+                    KMaxDailySubsidyPerState[kAgentId] / kNumSubsidyLevels;
+            }
 
             obs_a_time_until_next_subsidy[
                 time_independent_array_index] =
                     1 - (t_since_last_subsidy /
                     static_cast<float>(kSubsidyInterval));
-            obs_a_current_subsidy_level[
+            obs_a_current_subsidy_quantitative_policy_level[
                 time_independent_array_index] =
-                    num_subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] /
+                    subsidy_quantitative_policy_level[time_dependent_array_index_curr_t] /
                     static_cast<float>(kNumSubsidyLevels);
         } else if (kAgentId == (kNumAgents - 1)) {
             for (int action_id = 0; action_id < kNumSubsidyLevels + 1;
@@ -200,8 +213,8 @@ extern "C" {
                     obs_a_time_until_next_subsidy[
                         kEnvId * (kNumAgents - 1)
                     ];
-                obs_p_current_subsidy_level[kEnvId] = 
-                    obs_a_current_subsidy_level[
+                obs_p_current_subsidy_quantitative_policy_level[kEnvId] = 
+                    obs_a_current_subsidy_quantitative_policy_level[
                         kEnvId * (kNumAgents - 1)
                     ];
             }
