@@ -261,7 +261,6 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
 
         return obs_dict
 
-
 @component_registry.add
 class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
     """
@@ -289,7 +288,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
         self,
         *base_component_args,
         subsidy_quantitative_policy_interval=90,
-        num_subsidy_quantitative_policy_level=40,
+        num_subsidy_quantitative_policy_level=140,
         max_annual_monetary_unit_per_person=20000,
         **base_component_kwargs,
     ):
@@ -467,11 +466,20 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                 subsidy_quantitative_policy_level
             ).astype(self.np_int_dtype)
 
+
+
+            # "US Tax Wedge"
+            # "US Government Defense Spending",
+            # "US Government Social Security Spending",
+            # "US Government Medicare Medicaid Spending",
+            # "US Government Non Defense Others Spending",
             # Update subsidy - quantitative easing level
-            if subsidy_quantitative_policy_level <= self.num_subsidy_quantitative_policy_level / 2 :
-                subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level / self.num_subsidy_quantitative_policy_level / 2
+            
+            hundred_billions = 10**9 / 365
+            if subsidy_quantitative_policy_level <= 20:
+                subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level / 20
                 daily_statewise_subsidy = (
-                subsidy_quantitative_policy_level_frac * self.max_daily_subsidy_per_state
+                    subsidy_quantitative_policy_level_frac * self.max_daily_subsidy_per_state
                 )
 
                 self.world.global_state["Subsidy"][
@@ -481,43 +489,53 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
 
             # quantitative easing action - only increase the self.world.global_state["Quantitative"]
             # value where level 20 to 30 is the quantitative tightening action, from 31 to 40 is the quantitative easing action
-            else:
-                quantitative_level_frac = (subsidy_quantitative_policy_level -
-                                           self.num_subsidy_quantitative_policy_level / 2) /\
-                                          self.num_subsidy_quantitative_policy_level / 2
-                if subsidy_quantitative_policy_level < 30:
-                    quantitative_level_frac = -1 * quantitative_level_frac
-
-
+            elif subsidy_quantitative_policy_level > 20 \
+                and subsidy_quantitative_policy_level <= 40:
+                subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 30) / 10
                 daily_statewise_quantitative = (
-                    quantitative_level_frac * self.max_daily_quantitative_per_state
+                    subsidy_quantitative_policy_level_frac * self.max_daily_quantitative_per_state
                 )
+
                 self.world.global_state["Quantitative"][
                     self.world.timestep
                 ] = daily_statewise_quantitative
-                self.world.global_state["Federal Reserve Balance Sheet"] += np.sum(daily_statewise_quantitative) 
-            # else:
-            #     # To map the numbers 41 and 42 to -1 and 1, respectively, you can use a linear
-            #     # transformation function. Here's a step-by-step approach to create the function:
+                self.world.planner.state["Total Quantitative"] += np.sum(daily_statewise_quantitative) 
+            elif subsidy_quantitative_policy_level > 40 \
+                and subsidy_quantitative_policy_level <= 60:
+                subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 50) / 10
+                self.world.global_state["US Tax Wedge"][
+                    self.world.timestep
+                ] += subsidy_quantitative_policy_level_frac * 0.1 # increasing 10% in GDP Taxation Wedge
+            
+            elif subsidy_quantitative_policy_level > 60 \
+                and subsidy_quantitative_policy_level <= 80:
+                subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 70) / 10
+                self.world.global_state["US Government Defense Spending"][
+                    self.world.timestep
+                ] += subsidy_quantitative_policy_level_frac * hundred_billions
 
-            #     # Assume the function to be y = m * x + b, where x is the input number,
-            #     # m is the slope of the line, b is the y-intercept, and y is the corresponding output.
+            elif subsidy_quantitative_policy_level > 90 \
+                and subsidy_quantitative_policy_level <= 100:
+                subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 90) / 10
+                self.world.global_state["US Government Social Security Spending"][
+                    self.world.timestep
+                ] += subsidy_quantitative_policy_level_frac * hundred_billions
 
-            #     # We have two pairs of inputs and outputs: (41, -1) and (42, 1).
-            #     # Substitute these in the function to get two equations with m and b:
-            #     # Solve the linear system to find the values of m and b:
-            #     # By subtracting the first equation from the second equation: 2 = m
+            elif subsidy_quantitative_policy_level > 100 \
+                and subsidy_quantitative_policy_level <= 120:
+                subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 110) / 10
+                self.world.global_state["US Government Medicare Medicaid Spending"][
+                    self.world.timestep
+                ] += subsidy_quantitative_policy_level_frac * hundred_billions
+            
+            elif subsidy_quantitative_policy_level > 120 \
+                and subsidy_quantitative_policy_level <= 140:
+                subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 130) / 10
+                self.world.global_state["US Government Non Defense Others Spending"][
+                    self.world.timestep
+                ] += subsidy_quantitative_policy_level_frac * hundred_billions
+            
 
-            #     # Now that we have m = 2, substitute it into one of the equations
-            #     # (choose the first one) to find b: -1 = 41 * 2 + b || -1 = 82 + b --> b = -83
-
-            #     # The linear transformation function is now defined as y = 2 * x - 83
-
-            #     decrease_or_increase = num_subsidy_quantitative_policy_level * 2 - 83
-                # Make the code above shorter
-            # self.world.global_state["Federal Reserve Fund Rate"][
-            #     self.world.timestep] = self.world.global_state["Federal Reserve Fund Rate"][
-            #     self.world.timestep] * (1 + decrease_or_increase * 0.5/100)
 
 
 

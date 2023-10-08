@@ -110,14 +110,20 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         economic_reward_crra_eta=2,
         health_priority_scaling_agents=1,
         health_priority_scaling_planner=1,
-        reward_normalization_factor=1,
-        us_tax_wedge=0.282,
-        us_government_spending_economic_multiplier=2.05, # Fiscal multiplier - Average of 1.7 and 3.3 via tax cuts and spending increases
-        us_government_mandatory_and_discretionary_spending=4.4*10**12, 
-        us_government_debt=23*10**12, 
-        us_treasury_yield_long_term=1.35/100,
-        us_M2_money_supply=3955.3*10**9,
-        fed_reserve_balance_sheet=4*10**12,
+        reward_normalization_factor=1, 
+        us_government_spending_economic_multiplier=2.05, # Fiscal multiplier - Average of 1.7 and 3.3 via tax cuts and spending increases - One paper stated that US Government spending only have 0.6 - 0.8 multiplier Fiscal multiplier - https://www.nber.org/system/files/working_papers/w15464/w15464.pdf
+        us_government_mandatory_and_discretionary_spending = 4.4 * 10**12 / 365, 
+        us_government_defense_spending = 676 * 10**9 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
+        us_government_social_security_spending = 10**12 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
+        us_government_medicare_medicaid_spending = 1.053 * 10**12 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
+        us_government_non_defense_others_spending = 1.303 * 10**12 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
+        us_federal_net_interest = 0.375 * 10**12 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
+        us_government_debt = 16.898 * 10**12, # https://www.cbo.gov/publication/56309
+        us_treasury_yield_long_term= 0.375/16.898, # divided us_federal_net_interest by us_government_debt 
+        us_federal_revenue= 3.5 * 10**12 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
+        us_M2_money_supply= 3955.3*10**9,
+        fed_reserve_balance_sheet= 4*10**12,
+        cbo_output_gap_2019=0.9165, # https://www.cbo.gov/data/budget-economic-data - 10-Year Economic Projections - Jul 2020
         **base_env_kwargs,
     ):
         # verify_activation_code()
@@ -210,6 +216,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         # US states and populations
         self.num_us_states = len(self.us_state_population)
+        self.cbo_output_gap_2019 = cbo_output_gap_2019
 
         assert (
             base_env_kwargs["n_agents"] == self.num_us_states
@@ -288,14 +295,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         num_unemployed_at_stringency_level_1 = self.unemployment_step(
             np.ones(self.num_us_states)
         )
-        workforce = (
+        self.workforce = (
             self.us_population * pop_between_age_18_65
             - np.sum(num_unemployed_at_stringency_level_1)
         ).astype(self.np_int_dtype)
-        workers_per_capita = (workforce / self.us_population).astype(
+        self.workers_per_capita = (self.workforce / self.us_population).astype(
             self.np_float_dtype
         )
-        gdp_per_worker = (self.gdp_per_capita / workers_per_capita).astype(
+        self.gdp_per_worker = (self.gdp_per_capita / self.workers_per_capita).astype(
             self.np_float_dtype
         )
         # The tax wedge for the average single worker in the United States increased by 1.2 percentage points from 27.2% in 2020 to 28.4% in
@@ -303,11 +310,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
 
         # The US government spending multiplier is 0.8, according to the Congressional Budget Office. https://www.crfb.org/papers/comparing-fiscal-multipliers
-        self.us_tax_wedge = self.np_float_dtype(us_tax_wedge)
         self.us_government_spending_economic_multiplier = self.np_float_dtype(us_government_spending_economic_multiplier)
         self.num_days_in_an_year = 365
         self.daily_production_per_worker = (
-            gdp_per_worker / self.num_days_in_an_year
+            self.gdp_per_worker / self.num_days_in_an_year
         ).astype(self.np_float_dtype)
 
         self.infection_too_sick_to_work_rate = self.np_float_dtype(
@@ -328,14 +334,19 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             population_between_age_18_65=self.pop_between_age_18_65,
         )
         self.maximum_productivity_t = max_productivity_t
-        self.us_government_revenue = (
-            self.us_population * self.gdp_per_capita * self.us_tax_wedge
-        )
+        self.us_government_revenue = us_federal_revenue
         self.us_gdp_2019 = self.us_population * self.gdp_per_capita
         # 2019 US government spending was $4.4 trillion,
         # according to the Congressional Budget Office. https://www.cbo.gov/publication/56324
         self.us_government_mandatory_and_discretionary_spending = \
             us_government_mandatory_and_discretionary_spending
+        
+        self.us_tax_wedge = self.np_float_dtype(self.us_government_revenue * 365 / self.us_gdp_2019)
+        self.us_government_defense_spending = us_government_defense_spending
+        self.us_government_social_security_spending = us_government_social_security_spending
+        self.us_government_medicare_medicaid_spending = us_government_medicare_medicaid_spending
+        self.us_government_non_defense_others_spending = us_government_non_defense_others_spending
+        self.us_federal_net_interest = us_federal_net_interest
         self.us_federal_deficit = self.us_government_mandatory_and_discretionary_spending \
             - self.us_government_revenue
         # Economic reward non-linearity
@@ -472,13 +483,19 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             data=self.us_government_spending_economic_multiplier,
         )
         data_dict.add_data(
-            name="us_tax_wedge",
-            data=self.us_tax_wedge,
+            name="USTaxWedge",
+            data=self.world.global_state["US Tax Wedge"],
+            save_copy_and_apply_at_reset=True,
         )
         # Economy-related
         data_dict.add_data(
             name="subsidy",
             data=self.world.global_state["Subsidy"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="output_gap",
+            data=self.world.global_state["Output Gap"],
             save_copy_and_apply_at_reset=True,
         )
         # Federal Reserve
@@ -498,6 +515,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
+            name="USTreasuryYieldLongTerm",
+            data=self.world.global_state["US Treasury Yield Long Term"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
             name="USFederalDeficit",
             data=self.world.global_state["US Federal Deficit"],
             save_copy_and_apply_at_reset=True,
@@ -513,8 +535,38 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
+            name="FederalReserveBalanceSheet2019",
+            data=self.world.global_state["Federal Reserve Balance Sheet 2019"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
             name="FederalReserveFundRate",
             data=self.world.global_state["Federal Reserve Fund Rate"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USGovernmentDefenseSpending",
+            data=self.world.global_state["US Government Defense Spending"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USGovernmentSocialSecuritySpending",
+            data=self.world.global_state["US Government Social Security Spending"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USGovernmentMedicareMedicaidSpending",
+            data=self.world.global_state["US Government Medicare Medicaid Spending"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USGovernmentNonDefenseOthersSpending",
+            data=self.world.global_state["US Government Non Defense Others Spending"],
+            save_copy_and_apply_at_reset=True,
+        )
+        data_dict.add_data(
+            name="USFederalInterestPayment",
+            data=self.world.global_state["US Federal Interest Payment"],
             save_copy_and_apply_at_reset=True,
         )
         data_dict.add_data(
@@ -992,23 +1044,22 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 infection_too_sick_to_work_rate=self.infection_too_sick_to_work_rate,
                 population_between_age_18_65=self.pop_between_age_18_65,
             )
-            # Current GDP after calculating the death rate
-            self.world.global_state["US GDP"][
-                curr_t
-            ] = (np.sum(self.us_state_population) - np.sum(_D_t)) * self.gdp_per_capita
 
-            # Federal tax revenue
-            # federal_tax_revenue = (
-            #     productivity_t * self.us_tax_wedge
-            # )
+            # Current GDP after calculating the death rate 
+            
+            # Federal tax revenue 
 
             # Considered the tax revenue is attached with the productivity
-            federal_tax_revenue = self.world.global_state["US GDP"][
-                                      curr_t
-                                  ]  * self.us_tax_wedge
             self.world.global_state["US Government Revenue"][
                 self.world.timestep
-            ] = federal_tax_revenue
+            ] = self.world.global_state["US GDP"][
+                self.world.timestep
+            ] * self.world.global_state["US Tax Wedge"][
+                    self.world.timestep
+                ]
+            federal_tax_revenue = self.world.global_state["US Government Revenue"][
+                self.world.timestep
+            ]
             # Subsidies
             # ---------
             # Add federal government subsidy to productivity
@@ -1020,43 +1071,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 curr_t
             ] = postsubsidy_productivity_t * \
                (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep])
-            # minus sign here is because the Deficit is positive, and vice versa, plus sign meant we have Surplus
-            federal_interest_payment = self.world.global_state["US Federal Debt"][
-                self.world.timestep
-            ] * self.world.global_state["Federal Reserve Fund Rate"][
-                self.world.timestep
-            ]
-            self.world.global_state["US Federal Deficit"][
-                self.world.timestep
-            ] = federal_tax_revenue - self.world.global_state["US Government Mandatory and Discretionary Spending"][
-                self.world.timestep
-            ] - np.sum(daily_statewise_subsidy_t)
-            self.world.global_state["US Debt"][
-                self.world.timestep + 1
-            ] = self.world.global_state["US Debt"][
-                self.world.timestep
-            ] + self.world.global_state["US Federal Deficit"][
-                self.world.timestep
-            ]
 
-            federal_real_primary_surplus = self.world.global_state["US Federal Deficit"][
-                self.world.timestep
-            ] - federal_interest_payment
-
-            # A 2019 study by Congressional Budget Office (CBO) economists Edward Gamber and
-            # John Seliski found that every 10 percent increase in the debt-to-GDP ratio translates into
-            # a 0.2 to 0.3 percentage point increase in interest rates
-            # -- https://www.crfb.org/papers/risks-and-threats-deficits-and-debt
-            # If inflation larger than 3%, then the Federal Reserve will increase the interest rate
-
-
-            self.world.global_state["Inflation"][
-                self.world.timestep + 1
-            ] = self.world.global_state["Inflation"][
-                self.world.timestep
-            ] + 0.1 * np.sum(daily_statewise_subsidy_t) / pow(10, 11)
-
-
+ 
             # Federal Reserve Fund Rate
 
             # TODO: Add indicator for default risk via Debt, Debt to GDP, Interest Rate, Deficit, Reserve Balance
@@ -1073,11 +1089,134 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             # b_t is the expected discounted sum of future surpluses
             #  TODO: Calculate the primary surplus - which is s_t_plus_j - current primary surplus and
             #   the sum of the past primary surpluses and the discount_factor equals 1 / fed_fund_rate
-            if self.world.global_state["Inflation"][self.world.timestep] * 100 > 0.03:
-                self.world.global_state["Federal Reserve Fund Rate"][
-                    self.world.timestep
-                ] = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep - 1] + 0.05 / 100
+  
+            federal_interest_payment = self.world.global_state["US Federal Debt"][
+                self.world.timestep
+            ] * self.world.global_state["US Treasury Yield Long Term"][
+                self.world.timestep
+            ] 
+            self.world.global_state["US Federal Deficit"][
+                self.world.timestep
+            ] = federal_tax_revenue - self.world.global_state["US Government Defense Spending"][
+                self.world.timestep
+            ] - self.world.global_state["US Government Social Security Spending"][
+                self.world.timestep
+            ] - self.world.global_state["US Government Medicare Medicaid Spending"][
+                self.world.timestep
+            ] - self.world.global_state["US Government Non Defense Others Spending"][
+                self.world.timestep
+            ] - np.sum(daily_statewise_subsidy_t) - federal_interest_payment
+            self.world.global_state["US Debt"][
+                self.world.timestep + 1
+            ] = self.world.global_state["US Debt"][
+                self.world.timestep
+            ] + self.world.global_state["US Federal Deficit"][
+                self.world.timestep
+            ]
 
+ 
+            # TODO: Later implement Federal Reserve
+            # if self.world.global_state["Inflation"][self.world.timestep] * 100 > 0.03:
+            #     self.world.global_state["Federal Reserve Fund Rate"][
+            #         self.world.timestep
+            #     ] = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep - 1] + 0.05 / 100
+
+            # [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(rho = rho, rhoi = rhoi, rhos = rhos)
+            # [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] = \
+            #     self.f_doir_final(self.episode_length, Nb, nb, N, Q, ze, Lb, 0 * t_ipi, 0 * t_ix, 0 * t_spi,  
+            #                       0 * t_sx, alph, omeg, b_s, b_i, shock, rho)
+            # it = a + ρit−1 + bxt + cπt + uit
+            # st = a + ρst−1 + bxt + cπt + ust 
+            # c = 0.22
+
+            if self.world.timestep % 360 == 0 and self.world.timestep > 0: 
+                OUTPUT_GAP_CBO_2020_2030 = [-6.544903164, -4.243083199, -3.110728734, -2.791215879, -2.390089734, -1.917691323, -1.378409155, -0.843000579, -0.49877297, -0.450204275, -0.443190716]
+                REAL_POTENTIAL_GDP_2019_2030 = [
+                    21052, 21667,	22103,	22810,	23654,	24568,	25535,	26531,	27556,	28618,	29726,	30870,
+                ] * 10**9
+                current_real_potential_gdp = REAL_POTENTIAL_GDP_2019_2030[self.world.timestep / 360]
+                bet = 0.99 # 
+                omeg = 0.9 # 0.7 in draft, but larger illustrates long term debt effects better. maturity coeff
+                alph = 0.2 # 
+                sig = 0.5 #
+                kap = 0.5 #
+                # kap = 100000 # to produce flex price row of table. Over writes graphs!
+                rhoi = 0.7 #
+                rhos = 0.5 
+                # rho = 0.39 #rho = 1  works too
+                rho = 0.99
+                t_ix = 0.5 # these are set to zero below in the case of no rules 
+                t_ipi = 0.8
+                t_sx = 1
+                t_spi = 0.25
+                b_i = 0
+                b_s= 0 # initialize so functions have an argument. Should not be used before defined. 
+                # horizon of simulation is the episode length 
+
+                fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
+                total_deficit = np.sum(self.world.global_state["US Federal Deficit"])
+                shock_determinator = -1 if total_deficit < 0 else 1
+                total_federal_interest_payment = np.sum(self.world.global_state["US Federal Interest Payment"])
+                fiscal_shock = shock_determinator * (np.abs(total_deficit) - total_federal_interest_payment) / self.world.global_state["US GDP"][curr_t]
+                monetary_shock = -(self.world.global_state["Federal Reserve Balance Sheet"]) / self.world.global_state["US GDP"][curr_t]
+                H = 10 # horizon of simulation is the episode length - 10 years
+
+                shock = [monetary_shock, fiscal_shock] # fiscal shock. 0.01 is 1% of GDP.
+                fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
+
+                b_s_guess = np.array([0, 1])
+                f = lambda b_s: self.parameterfun_s(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, 
+                                            b_i, b_s, H, t_spi, t_sx, alph, [0, shock[1]], fraction_inflated)
+                f_i = lambda b_i: self.parameterfun(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, 0, H, t_spi, t_sx, alph, 
+                                            [shock[0], 0],)
+                b_s, info, ier, msg = self.fsolve(f, b_s_guess, full_output=True)
+                b_s = np.mean(b_s) 
+                
+                b_i, info, ier, msg = self.fsolve(f_i, b_s_guess, full_output=True)
+                b_i = np.mean(b_i)
+                # b_s = 0.1368
+                [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(sig,kap,bet,omeg,rho,t_ix,t_ipi,rhoi,rhos,b_i,b_s)
+                print('N\n', N, '\nNb\n', Nb,'\nnb\n', nb, '\nQ\n', Q, '\nze\n', ze, '\nLb\n', Lb) 
+                [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] =\
+                self.f_doir_final(H , Nb, nb, N, Q, ze, Lb, t_ipi , t_ix , t_spi, t_sx, alph ,omeg , b_s , b_i , shock, rho); 
+
+                self.world.global_state["Federal Reserve Fund Rate"][
+                    self.world.timestep + 1
+                ] = self.world.global_state["Federal Reserve Fund Rate"][
+                    self.world.timestep
+                ] * (1 + it[1] )
+                self.world.global_state["US Treasury Yield Long Term"][
+                    self.world.timestep
+                ] = self.world.global_state["US Treasury Yield Long Term"][
+                    self.world.timestep
+                ] * (1 + yldt[1] )
+
+                self.world.global_state["Inflation"][
+                    self.world.timestep + 1
+                ] = self.world.global_state["Inflation"][
+                    self.world.timestep
+                ] * (1 + pit[1] ) 
+
+                self.world.global_state["Output Gap"][
+                    self.world.timestep + 1
+                ] = self.world.global_state["Output Gap"][
+                    self.world.timestep
+                ] * (1 + xt[1] )
+                 
+                self.world.global_state["US GDP"][
+                    self.world.timestep + 1
+                ] = self.world.global_state["Output Gap"][
+                    self.world.timestep + 1
+                ] / 100 * current_real_potential_gdp + current_real_potential_gdp
+
+
+            # A 2019 study by Congressional Budget Office (CBO) economists Edward Gamber and
+            # John Seliski found that every 10 percent increase in the debt-to-GDP ratio translates into
+            # a 0.2 to 0.3 percentage point increase in interest rates
+            # -- https://www.crfb.org/papers/risks-and-threats-deficits-and-debt
+            # If inflation larger than 3%, then the Federal Reserve will increase the interest rate
+
+            
 
             # Update agent state
             # ------------------
@@ -1227,6 +1366,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         return obs_dict
 
+    # Heritage Foundation Defense Index - 2020
+    # Taxation level and Public Happiness
+    # Output Gap should be close to 0
+    # Inflation should be close to 0
+    # US GDP Growth Rate should be higher than 0
+    # Healthcare efficency via spending  
     def compute_reward(self):
         """
         Compute the social welfare metrics for each agent and the planner.
@@ -1371,20 +1516,18 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             / self.planner_health_norm
         )
 
-        # With 42% Debt to GDP, the income will growth around 1.46% per year,
-        # With 219% Debt to GDP, the income will growth around 1.09% per year,
-        # With the current 100% Debt to GDP, what is the income growth rate?
-        resulting_income_growth_rate = 1.09 + (1.46 - 1.09) * \
-            (self.world.global_state["US Debt"][self.world.timestep]/self.world.global_state["US GDP"][self.world.timestep] * 100 - 219) / (42 - 219)
+        # # With 42% Debt to GDP, the income will growth around 1.46% per year,
+        # # With 219% Debt to GDP, the income will growth around 1.09% per year,
+        # # With the current 100% Debt to GDP, what is the income growth rate?
+        # resulting_income_growth_rate = 1.09 + (1.46 - 1.09) * \
+        #     (self.world.global_state["US Debt"][self.world.timestep]/self.world.global_state["US GDP"][self.world.timestep] * 100 - 219) / (42 - 219)
             
-        slow_growth_rate = 1.46 - resulting_income_growth_rate;
+        # slow_growth_rate = 1.46 - resulting_income_growth_rate;
         
         # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
         cost_of_subsidy_t = (1 + self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]) *\
                             np.sum(quantitative_t) + (np.sum(subsidy_t) - np.sum(quantitative_t)) * \
-                            (1 + self.us_treasury_yield_long_term) + self.world.global_state["US GDP"][
-                                self.world.timestep
-                            ]  * slow_growth_rate
+                            (1 + self.us_treasury_yield_long_term)
 
         # Use a "crra" nonlinearity on the planner economic reward
         marginal_planner_economic_index = crra_nonlinearity(
@@ -1476,17 +1619,31 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         # All US states start with zero subsidy and zero Postsubsidy Productivity
         self.set_global_state("Subsidy Quantitative Policy Level", dtype=self.np_float_dtype)
+        self.set_global_state("Output Gap", dtype=self.np_float_dtype, value=self.cbo_output_gap_2019)
         self.set_global_state("US Debt", dtype=self.np_float_dtype, value=self.us_government_debt)
         self.set_global_state("Federal Reserve Balance Sheet", value=self.fed_reserve_balance_sheet)
+        self.set_global_state("Federal Reserve Balance Sheet 2019", value=self.fed_reserve_balance_sheet)
         self.set_global_state("Federal Reserve Fund Rate", value=self.fed_fund_rates)
         self.set_global_state("Inflation", value=self.inflation_cpi_2019)
         self.set_global_state("US M2 Money Supply", value=self.us_M2_money_supply)
+        self.set_global_state("US Tax Wedge", value=self.us_tax_wedge, dtype=self.np_float_dtype)
         self.set_global_state("US GDP", value=self.us_gdp_2019)
         self.set_global_state("US Government Revenue", value=self.us_government_revenue, 
                               dtype=self.np_float_dtype)
         self.set_global_state("US Government Mandatory and Discretionary Spending", 
                               value=self.us_government_mandatory_and_discretionary_spending,
-                              dtype=self.np_float_dtype)
+                              dtype=self.np_float_dtype) 
+
+        self.set_global_state("US Federal Interest Payment", value=self.us_federal_net_interest,
+                                dtype=self.np_float_dtype)
+        self.set_global_state("US Treasury Yield Long Term", value=self.us_treasury_yield_long_term)
+
+        self.set_global_state("US Government Defense Spending", value=self.us_government_defense_spending, dtype=self.np_float_dtype)
+        self.set_global_state("US Government Social Security Spending", value=self.us_government_social_security_spending, dtype=self.np_float_dtype)
+        self.set_global_state("US Government Medicare Medicaid Spending", value=self.us_government_medicare_medicaid_spending, dtype=self.np_float_dtype)
+        self.set_global_state("US Government Non Defense Others Spending", value=self.us_government_non_defense_others_spending, dtype=self.np_float_dtype)
+
+        
         self.set_global_state("US Federal Deficit", value=self.us_federal_deficit,
                               dtype=self.np_float_dtype)
         # Reduced GDP Multiplier, 0.0 means no reduction
@@ -1574,11 +1731,19 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             "Subsidy Quantitative Policy Level",
             "US Debt",
             "Federal Reserve Balance Sheet",
+            "Federal Reserve Balance Sheet 2019",
             "Federal Reserve Fund Rate",
             "Inflation",
             "US M2 Money Supply", 
+            "US Tax Wedge",
             "US Government Revenue", 
             "US Government Mandatory and Discretionary Spending", 
+            "US Federal Interest Payment",
+            "US Treasury Yield Long Term",
+            "US Government Defense Spending",
+            "US Government Social Security Spending",
+            "US Government Medicare Medicaid Spending",
+            "US Government Non Defense Others Spending",
             "US Federal Deficit",
             "Subsidy",
             "Quantitative",
@@ -1745,7 +1910,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         num_people_that_can_work = np.maximum(0, num_workers - cant_work)
         # This formula does not count on how unemployed workers consumes the resource of the state - mainly in unemployment benefits.
-        # This formula does not count on how sick workers consumes the resource of the state - mainly in healthcare.
+        # This formula does not count on how sick workers consumes the resource of the state - mainly in healthcare. 
+        self.gdp_per_capita = self.world.global_state["US GDP"][self.world.timestep] / self.us_population
+        self.gdp_per_worker = (self.gdp_per_capita / self.workers_per_capita).astype(
+            self.np_float_dtype
+        )  
+        self.daily_production_per_worker = (
+            self.gdp_per_worker / self.num_days_in_an_year
+        ).astype(self.np_float_dtype)
         productivity = (
             num_people_that_can_work * self.daily_production_per_worker
         ).astype(self.np_float_dtype)
@@ -1966,3 +2138,147 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         ]
 
         return metrics_dict
+ 
+
+    
+    def solveFiscalTheoryModel(self, sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s):
+        # matrices
+        show_results = False  # use for debugging
+        A = np.eye(5)  
+        # print(A.shape[0])
+        N = A.shape[0]
+
+        # x pi q ui us
+        # [0.988, 0.026, 0, 0, 0]
+        B = np.array([
+            [1 + sig * t_ix + sig * kap / bet, sig * t_ipi - sig / bet, 0, sig, 0],
+            [-kap / bet, 1 / bet, 0, 0, 0],
+            [t_ix / omeg, t_ipi / omeg, 1 / omeg, 1 / omeg, 0],
+            [0, 0, 0, rhoi, 0],
+            [0, 0, 0, 0, rhos]
+        ])
+
+        C = np.array([
+            [0, 0],
+            [-b_i, -b_s],
+            [0, 0],
+            [1, 0],
+            [0, 1]
+        ])
+
+        D = np.array([
+            [1, 0],
+            [0, 0],
+            [0, 1],
+            [0, 0],
+            [0, 0]
+        ])
+
+        # Solve by eigenvalues
+        A1 = np.linalg.inv(A)
+        F = np.dot(A1, B)
+        L, Q = np.linalg.eig(F)  
+        Q1 = np.linalg.inv(Q)
+        if show_results:
+            print('Eigenvalues')
+            print(np.abs(np.diag(L)))
+
+        # produce Ef, Eb, that select forward and backward eigvenvalues.
+        nf = np.where(np.abs(L) >= 1)[0]  # nf is the index of eigenvalues greater than one
+        if show_results:
+            print('number of eigenvalues >=1')
+            print(nf.shape[0])
+        if nf.shape[0] < D.shape[1]:
+            print('not enough eigenvalues greater than 1')
+        Ef = np.zeros((nf.shape[0], A.shape[1]))
+        Efstar = np.zeros((A.shape[1], A.shape[1]))
+        for indx in range(nf.shape[0]):
+            Ef[indx, nf[indx]] = 1
+            Efstar[nf[indx], nf[indx]] = 1
+    
+    
+        indices = np.abs(L.T)
+
+        # Print the result
+        nb = np.where(indices < 1)[0]
+        Eb = np.zeros((nb.shape[0], A.shape[1]))
+        for indx in range(nb.shape[0]):
+            Eb[indx, nb[indx]] = 1
+
+
+        
+        # ze = np.dot(Eb, np.dot(Q1, np.dot(A1,
+        #     C - np.dot(D, np.dot(inverse_linalg_Q1_A1_D,Ef_Q1_A1_C))
+        # )))
+        ze = np.dot(Eb, Q1)
+        ze = np.dot(ze, A1) 
+        Ef_Q1 = np.dot(Ef, Q1)
+        Ef_Q1_A1 = np.dot(Ef_Q1, A1) 
+        Ef_Q1_A1_D = np.dot(Ef_Q1_A1, D)
+        D_Ef_Q1_A1_D = np.dot(D, np.linalg.inv(Ef_Q1_A1_D)) 
+        D_Ef_Q1_A1_D_Ef = np.dot(D_Ef_Q1_A1_D, Ef)
+        D_Ef_Q1_A1_D_Ef_Q1 = np.dot(D_Ef_Q1_A1_D_Ef, Q1)
+        D_Ef_Q1_A1_D_Ef_Q1_A1 = np.dot(D_Ef_Q1_A1_D_Ef_Q1, A1)
+        D_Ef_Q1_A1_D_Ef_Q1_A1_C = np.dot(D_Ef_Q1_A1_D_Ef_Q1_A1, C) 
+        ze = np.dot(ze, C - D_Ef_Q1_A1_D_Ef_Q1_A1_C)
+
+        # how epsilon shocks map to z.
+        # in principle the forward z are zero. In practice they are 1E-16 and then
+        # grow. So I go through the trouble of simulating forward only the nonzero
+        # z and eigenvalues less than one. 
+        Nb = Eb.shape[0]  # number of stable z's 
+        Lb = np.dot(np.dot(Eb, np.diag(L)), Eb.T)  # diagonal with only stable Ls
+
+        return N, Nb, nb, Q, ze, Lb
+    
+            
+    def f_doir_final(self, H, Nb, nb, N, Q, ze, Lb, t_ipi, t_ix, t_spi, t_sx, alph, omeg, b_s, b_i, shock, rho):
+        zbt = np.zeros((H, Nb))
+        
+        zbt[1, :] = np.dot(ze, shock) 
+        for t in range(2, H):
+            zbt[t, :] = np.dot(Lb, zbt[t-1, :]) 
+        zt = np.zeros((H, N))
+        zt[:, nb] = zbt 
+        yt = np.dot(zt, Q.T)
+        xt = yt[:, 0]
+        pit = yt[:, 1]
+        qt = yt[:, 2]
+        uit = yt[:, 3]
+        ust = yt[:, 4]
+
+        rnt = np.zeros(H)
+        rnt = omeg * qt - np.concatenate(([0], qt[:-1]))
+
+        vt = np.zeros(H)
+        for t in range(1, H):
+            vt[t] = 1 / rho * ((1 - alph) * vt[t-1] + rnt[t] - (1 + t_spi) * pit[t] - t_sx * xt[t] - ust[t])
+
+        it = t_ipi * pit + t_ix * xt + uit
+        st = t_spi * pit + t_sx * xt + alph * np.concatenate(([0], vt[:-1])) + ust
+
+        qlevelt = qt - np.log(1 - omeg)
+        yldt = np.exp(-qlevelt) + omeg - 1
+
+        sumomeg = np.sum((omeg ** np.arange(H-1)) * pit[1:]) * 100
+        rhoj = np.concatenate(([0], rho ** np.arange(st.shape[0]-1)))
+        sumratio = -np.sum((omeg ** np.arange(H-1)) * pit[1:]) / np.sum(rhoj * ust)
+        # zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt, sumomeg, sumratio
+        return zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt, sumomeg, sumratio
+        
+    
+
+    def parameterfun_s(self, sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s, H, t_spi, t_sx, alph, shock, fraction_inflated):
+        sumratio = np.zeros_like(b_s)
+        for ind in range(b_s.shape[0]):
+            N, Nb, nb, Q, ze, Lb = self.solveFiscalTheoryModel(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s[ind])
+            zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt, sumomeg, sumratio[ind] = f_doir_final(H, Nb, nb, N, Q, ze, Lb, t_ipi, t_ix, t_spi, t_sx, alph, omeg, b_s[ind], b_i, shock, rho)
+            sumratio[ind] = sumratio[ind] - fraction_inflated
+        return sumratio 
+
+    def parameterfun(self, sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s, H, t_spi, t_sx, alph, shock):
+        sumomeg = np.zeros_like(b_i)
+        for ind in range(b_i.shape[0]):
+            N, Nb, nb, Q, ze, Lb = self.solveFiscalTheoryModel(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i[ind], b_s)
+            zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt, sumomeg[ind], sumratio = f_doir_final(H, Nb, nb, N, Q, ze, Lb, t_ipi, t_ix, t_spi, t_sx, alph, omeg, b_s, b_i[ind], shock, rho)
+        return sumomeg
