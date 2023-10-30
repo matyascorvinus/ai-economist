@@ -475,7 +475,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
             # "US Government Non Defense Others Spending",
             # Update subsidy - quantitative easing level
             
-            hundred_billions = 10**9 / 365
+            hundred_billions_divided_by_365 = 10**9 / 365
             if subsidy_quantitative_policy_level <= 20:
                 subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level / 20
                 daily_statewise_subsidy = (
@@ -499,7 +499,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                 self.world.global_state["Quantitative"][
                     self.world.timestep
                 ] = daily_statewise_quantitative
-                self.world.planner.state["Total Quantitative"] += np.sum(daily_statewise_quantitative) 
+                self.world.planner.state["Federal Reserve Balance Sheet"] += np.sum(daily_statewise_quantitative) 
             elif subsidy_quantitative_policy_level > 40 \
                 and subsidy_quantitative_policy_level <= 60:
                 subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 50) / 10
@@ -512,28 +512,28 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                 subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 70) / 10
                 self.world.global_state["US Government Defense Spending"][
                     self.world.timestep
-                ] += subsidy_quantitative_policy_level_frac * hundred_billions
+                ] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
 
             elif subsidy_quantitative_policy_level > 90 \
                 and subsidy_quantitative_policy_level <= 100:
                 subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 90) / 10
                 self.world.global_state["US Government Social Security Spending"][
                     self.world.timestep
-                ] += subsidy_quantitative_policy_level_frac * hundred_billions
+                ] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
 
             elif subsidy_quantitative_policy_level > 100 \
                 and subsidy_quantitative_policy_level <= 120:
                 subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 110) / 10
                 self.world.global_state["US Government Medicare Medicaid Spending"][
                     self.world.timestep
-                ] += subsidy_quantitative_policy_level_frac * hundred_billions
+                ] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
             
             elif subsidy_quantitative_policy_level > 120 \
                 and subsidy_quantitative_policy_level <= 140:
                 subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 130) / 10
-                self.world.global_state["US Government Non Defense Others Spending"][
+                self.world.global_state["US Government Income Security"][
                     self.world.timestep
-                ] += subsidy_quantitative_policy_level_frac * hundred_billions
+                ] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
             
 
 
