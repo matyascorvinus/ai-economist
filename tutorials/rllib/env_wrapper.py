@@ -71,7 +71,7 @@ class RLlibEnvWrapper(MultiAgentEnv):
 
         obs = self.env.reset()
 
-        self.observation_space = self._dict_to_spaces_dict(obs["0"])
+        self.observation_space = self._dict_to_spaces_dict(obs["a"])
         self.observation_space_pl = self._dict_to_spaces_dict(obs["p"])
 
         if self.env.world.agents[0].multi_action_mode:
