@@ -256,16 +256,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.num_us_states = len(self.us_state_population)
         self.cbo_output_gap_2019 = cbo_output_gap_2019 
         print(f"Number of US states: {self.num_us_states}")
-        assert (
-            base_env_kwargs["n_agents"] == self.num_us_states
-        ), "n_agents should be set to the number of US states, i.e., {}.".format(
-            self.num_us_states
-        )
+        # assert (
+        #     base_env_kwargs["n_agents"] == self.num_us_states
+        # ), "n_agents should be set to the number of US states, i.e., {}.".format(
+        #     self.num_us_states
+        # )
         # Note: For a faster environment step time, we collate all the individual agents
         # into a single agent index "a" and we flatten the component action masks too.
-        assert base_env_kwargs[
-            "collate_agent_step_and_reset_data"
-        ], "The env. config 'collate_agent_step_and_reset_data' should be set to True."
+        # assert base_env_kwargs[
+        #     "collate_agent_step_and_reset_data"
+        # ], "The env. config 'collate_agent_step_and_reset_data' should be set to True."
         super().__init__(*base_env_args, **base_env_kwargs)
 
         # Add attributes to self.world for use in components
@@ -1422,16 +1422,21 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Observation dict - Agents
         # -------------------------
         obs_dict = dict()
-        obs_dict["a"] = {
-            "agent_index": agent_index,
-            "agent_state": normalized_redux_agent_state,
-            "agent_postsubsidy_productivity": normalized_postsubsidy_productivity_t,
-            "lagged_stringency_level": normalized_lagged_stringency_level,
-        }
+        for i in range(self.n_agents - 1):
+            if i == 50:
+                continue
+            obs_dict[str(i)] = {
+                "agent_index": agent_index,
+                "agent_state": normalized_redux_agent_state,
+                "agent_postsubsidy_productivity": normalized_postsubsidy_productivity_t,
+                "lagged_stringency_level": normalized_lagged_stringency_level,
+            }
 
         # Observation dict - Planner
         # --------------------------
-        obs_dict[self.world.planner.idx] = {
+        print("self.world.planner.idx: ", self.world.planner.idx)
+        obs_dict[self.world.planner.idx] = { 
+            "agent_index": agent_index,
             "agent_state": normalized_redux_agent_state,
             "agent_postsubsidy_productivity": normalized_postsubsidy_productivity_t,
             "lagged_stringency_level": normalized_lagged_stringency_level,

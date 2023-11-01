@@ -77,11 +77,15 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
         self.masks = dict()
         self.default_agent_action_mask = [1 for _ in range(self.n_stringency_levels)]
         self.no_op_agent_action_mask = [0 for _ in range(self.n_stringency_levels)]
-        self.masks["a"] = np.repeat(
-            np.array(self.no_op_agent_action_mask)[:, np.newaxis],
-            self.n_agents,
-            axis=-1,
-        )
+        # self.masks["a"] = np.repeat(
+        #     np.array(self.no_op_agent_action_mask)[:, np.newaxis],
+        #     self.n_agents,
+        #     axis=-1,
+        # )
+        for agent in self.world.agents:
+            if(agent.idx == 50): 
+                continue
+            self.masks[agent.idx] = self.no_op_agent_action_mask
 
         # (This will be overwritten during reset; see below)
         self.action_in_cooldown_until = None
@@ -101,17 +105,31 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
         return None
 
     def generate_masks(self, completions=0):
+        # for agent in self.world.agents:
+        #     if self.world.use_real_world_policies:
+        #         self.masks["a"][:, agent.idx] = self.default_agent_action_mask
+        #     else:
+        #         if self.world.timestep < self.action_in_cooldown_until[agent.idx]:
+        #             # Keep masking the actions
+        #             self.masks["a"][:, agent.idx] = self.no_op_agent_action_mask
+        #         else:  # self.world.timestep == self.action_in_cooldown_until[agent.idx]
+        #             # Cooldown period has ended; unmask the "subsequent" action
+        #             self.masks["a"][:, agent.idx] = self.default_agent_action_mask
+        # return self.masks
         for agent in self.world.agents:
+            if(agent.idx == 50): 
+                continue
             if self.world.use_real_world_policies:
-                self.masks["a"][:, agent.idx] = self.default_agent_action_mask
+                self.masks[agent.idx] = self.default_agent_action_mask
             else:
                 if self.world.timestep < self.action_in_cooldown_until[agent.idx]:
                     # Keep masking the actions
-                    self.masks["a"][:, agent.idx] = self.no_op_agent_action_mask
+                    self.masks[agent.idx] = self.no_op_agent_action_mask
                 else:  # self.world.timestep == self.action_in_cooldown_until[agent.idx]
                     # Cooldown period has ended; unmask the "subsequent" action
-                    self.masks["a"][:, agent.idx] = self.default_agent_action_mask
+                    self.masks[agent.idx] = self.default_agent_action_mask
         return self.masks
+
 
     def get_data_dictionary(self):
         """
@@ -190,6 +208,8 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
                 self._checked_n_stringency_levels = True
 
             for agent in self.world.agents:
+                if(agent.idx == 50): 
+                    continue
                 if self.world.use_real_world_policies:
                     # Use the action taken in the previous timestep
                     action = self.world.real_world_stringency_policy[
@@ -250,10 +270,18 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
         agent_policy_indicators = self.world.global_state["Stringency Level"][
             self.world.timestep
         ]
-        obs_dict["a"] = {
-            "agent_policy_indicators": agent_policy_indicators
-            / self.n_stringency_levels
-        }
+        # obs_dict["a"] = {
+        #     "agent_policy_indicators": agent_policy_indicators
+        #     / self.n_stringency_levels
+        # }
+        for agent in self.world.agents:
+            
+            if(agent.idx == 50): 
+                continue
+            obs_dict[agent.idx] = {
+                "agent_policy_indicators": agent_policy_indicators[int(agent.idx)]
+                / self.n_stringency_levels
+            }
         obs_dict[self.world.planner.idx] = {
             "agent_policy_indicators": agent_policy_indicators
             / self.n_stringency_levels
@@ -552,10 +580,17 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
 
         # Normalized observations
         obs_dict = dict()
-        obs_dict["a"] = {
-            "t_until_next_subsidy": t_vec / self.subsidy_quantitative_policy_interval,
-            "current_subsidy_quantitative_policy_level": sl_vec / self.num_subsidy_quantitative_policy_level,
-        }
+        # obs_dict["a"] = {
+        #     "t_until_next_subsidy": t_vec / self.subsidy_quantitative_policy_interval,
+        #     "current_subsidy_quantitative_policy_level": sl_vec / self.num_subsidy_quantitative_policy_level,
+        # }
+        for agent in self.world.agents:
+            if(agent.idx == 50): 
+                continue
+            obs_dict[agent.idx] = {
+                "t_until_next_subsidy": t_vec[int(agent.idx)] / self.subsidy_quantitative_policy_interval,
+                "current_subsidy_quantitative_policy_level": sl_vec / self.num_subsidy_quantitative_policy_level,
+            }
         obs_dict[self.world.planner.idx] = {
             "t_until_next_subsidy": t_until_next_subsidy / self.subsidy_quantitative_policy_interval,
             "current_subsidy_quantitative_policy_level": current_subsidy_quantitative_policy_level / self.num_subsidy_quantitative_policy_level,
@@ -748,13 +783,22 @@ class VaccinationCampaign(BaseComponent):
 
         # Normalized observations
         obs_dict = dict()
-        obs_dict["a"] = {"t_until_next_vaccines": t_vec / self.delivery_interval}
+        # obs_dict["a"] = {"t_until_next_vaccines": t_vec / self.delivery_interval}
+        for agent in self.world.agents: 
+            if(agent.idx == 50): 
+                continue
+            obs_dict[agent.idx] = {"t_until_next_vaccines": t_vec[int(agent.idx)] / self.delivery_interval}
         obs_dict[self.world.planner.idx] = {
             "t_until_next_vaccines": t_until_next_vac / self.delivery_interval
         }
 
         if self.observe_rate:
-            obs_dict["a"]["next_vaccination_rate"] = r_vec
+            # obs_dict["a"]["next_vaccination_rate"] = r_vec
+            
+            for agent in self.world.agents:
+                if(agent.idx == 50): 
+                    continue
+                obs_dict[agent.idx]["next_vaccination_rate"] = r_vec[int(agent.idx)]
             obs_dict["p"]["next_vaccination_rate"] = float(next_vax_rate)
 
         return obs_dict
