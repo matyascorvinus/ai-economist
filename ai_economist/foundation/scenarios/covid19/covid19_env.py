@@ -17,6 +17,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 import math
+from scipy.optimize import fsolve
 
 
 try:
@@ -342,6 +343,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         # Economy-related
         # Interest rate for borrowing money from the federal reserve
+        self.yearCount = 1
         self.risk_free_interest_rate = self.np_float_dtype(risk_free_interest_rate)
         self.inflation_cpi_2019 = self.np_float_dtype(inflation_cpi_2019)
         self.fed_fund_rates = self.np_float_dtype(fed_fund_rate_01_2020)
@@ -400,6 +402,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.maximum_productivity_t = max_productivity_t
         self.us_government_revenue = us_federal_revenue
         self.us_gdp_2019 = self.us_population * self.gdp_per_capita
+        print("self.us_gdp_2019: ", self.us_gdp_2019)
         # 2019 US government spending was $4.4 trillion,
         # according to the Congressional Budget Office. https://www.cbo.gov/publication/56324
         self.us_government_mandatory_and_discretionary_spending = \
@@ -1072,7 +1075,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 )
 
             self.world.global_state["Unemployed"][curr_t] = num_unemployed_t
-
+            if curr_t + 1 <= self.episode_length:
+                self.world.global_state["US GDP"][
+                    curr_t + 1
+                ] = self.world.global_state["US GDP"][
+                    curr_t
+                ] 
             # Fiscal Multiplier : https://www.crfb.org/papers/comparing-fiscal-multipliers
 
             # So basically QE is a way to manage government debt
@@ -1103,7 +1111,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             #         it can also increase the sensitivity of the government's fiscal position to changes in short-term interest rates.
 
             # Productivity
-            # ------------
+            # ------------  
             productivity_t = self.economy_step(
                 self.us_state_population,
                 infected=_I_t,
@@ -1114,7 +1122,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             )
 
             # Current GDP after calculating the death rate 
-            
             # Federal tax revenue 
 
             # Considered the tax revenue is attached with the productivity
@@ -1124,7 +1131,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.world.timestep
             ] * self.world.global_state["US Tax Wedge"][
                     self.world.timestep
-                ]
+                ] / 365
             federal_tax_revenue = self.world.global_state["US Government Revenue"][
                 self.world.timestep
             ]
@@ -1134,9 +1141,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
              
             # print(self.world.global_state["US Tax Wedge"])
-            if(curr_t > 0 and self.world.global_state["US Tax Wedge"][curr_t] < self.world.global_state["US Tax Wedge"][curr_t - 1]):
+            if(curr_t > 1 and self.world.global_state["US Tax Wedge"][curr_t] < self.world.global_state["US Tax Wedge"][curr_t - 1]):
                 daily_statewise_subsidy_t += (self.world.global_state["US Tax Wedge"][curr_t - 1] - \
-                    self.world.global_state["US Tax Wedge"][curr_t]) * self.world.global_state["US GDP"][curr_t]
+                    self.world.global_state["US Tax Wedge"][curr_t]) * self.world.global_state["US GDP"][curr_t] / 365
                 
             postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]) + \
                                          daily_statewise_subsidy_t * \
@@ -1144,6 +1151,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             self.world.global_state["Postsubsidy Productivity"][
                 curr_t
             ] = postsubsidy_productivity_t 
+ 
                 
             # Federal Reserve Fund Rate
 
@@ -1166,7 +1174,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.world.timestep
             ] * self.world.global_state["US Treasury Yield Long Term"][
                 self.world.timestep
-            ] 
+            ] / 365
             self.world.global_state["US Federal Deficit"][
                 self.world.timestep
             ] = federal_tax_revenue - self.world.global_state["US Government Defense Spending"][
@@ -1202,12 +1210,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             # st = a + ρst−1 + bxt + cπt + ust 
             # c = 0.22
 
-            if self.world.timestep % 900 == 0 and self.world.timestep > 0: 
+            if self.world.timestep % 365 == 0 and self.world.timestep > 0 and self.world.timestep + 1 <= self.episode_length: 
                 OUTPUT_GAP_CBO_2020_2030 = [-6.544903164, -4.243083199, -3.110728734, -2.791215879, -2.390089734, -1.917691323, -1.378409155, -0.843000579, -0.49877297, -0.450204275, -0.443190716]
                 REAL_POTENTIAL_GDP_2019_2030 = [
                     21052, 21667,	22103,	22810,	23654,	24568,	25535,	26531,	27556,	28618,	29726,	30870,
-                ] * 10**9
-                current_real_potential_gdp = REAL_POTENTIAL_GDP_2019_2030[self.world.timestep / 360]
+                ] 
+                current_real_potential_gdp = REAL_POTENTIAL_GDP_2019_2030[self.yearCount] * 10**9
+                self.yearCount += 1
                 bet = 0.99 # 
                 omeg = 0.9 # 0.7 in draft, but larger illustrates long term debt effects better. maturity coeff
                 alph = 0.2 # 
@@ -1231,10 +1240,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 shock_determinator = -1 if total_deficit < 0 else 1
                 total_federal_interest_payment = np.sum(self.world.global_state["US Federal Interest Payment"])
                 fiscal_shock = shock_determinator * (np.abs(total_deficit) - total_federal_interest_payment) / self.world.global_state["US GDP"][curr_t]
-                monetary_shock = -(self.world.global_state["Federal Reserve Balance Sheet"]) / self.world.global_state["US GDP"][curr_t]
-                H = 10 # horizon of simulation is the episode length - 10 years
+                monetary_shock = -(self.world.global_state["Federal Reserve Balance Sheet"][curr_t]) / self.world.global_state["US GDP"][curr_t]
+                H = 2 # horizon of simulation is the episode length - 10 years
 
                 shock = [monetary_shock, fiscal_shock] # fiscal shock. 0.01 is 1% of GDP.
+                print('monetary_shock', monetary_shock)
+                print('fiscal_shock', fiscal_shock)
                 fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
 
                 b_s_guess = np.array([0, 1])
@@ -1242,10 +1253,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                                             b_i, b_s, H, t_spi, t_sx, alph, [0, shock[1]], fraction_inflated)
                 f_i = lambda b_i: self.parameterfun(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, 0, H, t_spi, t_sx, alph, 
                                             [shock[0], 0],)
-                b_s, info, ier, msg = self.fsolve(f, b_s_guess, full_output=True)
+                b_s, info, ier, msg = fsolve(f, b_s_guess, full_output=True)
                 b_s = np.mean(b_s) 
                 
-                b_i, info, ier, msg = self.fsolve(f_i, b_s_guess, full_output=True)
+                b_i, info, ier, msg = fsolve(f_i, b_s_guess, full_output=True)
                 b_i = np.mean(b_i)
                 # b_s = 0.1368
                 [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(sig,kap,bet,omeg,rho,t_ix,t_ipi,rhoi,rhos,b_i,b_s)
@@ -1275,7 +1286,18 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 ] = self.world.global_state["Output Gap"][
                     self.world.timestep
                 ] * (1 + xt[1] )
-                 
+                
+                # GDP_growth = self.world.global_state["Postsubsidy Productivity"][
+                #     curr_t
+                # ] / self.world.global_state["Postsubsidy Productivity"][
+                #     0
+                # ]
+                # self.world.global_state["US GDP"][
+                #     curr_t + 1
+                # ] = self.world.global_state["US GDP"][
+                #     curr_t
+                # ] * (np.average(GDP_growth))
+
                 self.world.global_state["US GDP"][
                     self.world.timestep + 1
                 ] = self.world.global_state["Output Gap"][
@@ -1422,9 +1444,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Observation dict - Agents
         # -------------------------
         obs_dict = dict()
-        for i in range(self.n_agents - 1):
-            if i == 50:
-                continue
+        for i in range(self.n_agents):
+            # if i == 50:
+            #     continue
             obs_dict[str(i)] = {
                 "agent_index": agent_index,
                 "agent_state": normalized_redux_agent_state,
@@ -1434,6 +1456,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         # Observation dict - Planner
         # --------------------------
+        # --------------------------
+        print("self.world.planner.idx: ", self.world.planner.idx)
+        # -------------------------- 
         print("self.world.planner.idx: ", self.world.planner.idx)
         obs_dict[self.world.planner.idx] = { 
             "agent_index": agent_index,
@@ -1505,7 +1530,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 grid=self.world.cuda_function_manager.grid,
             )
             return {}  # Return empty dict. Reward arrays are updated in-place
-        rew = {"a": 0, "p": 0}
+        # rew = {"a": 0, "p": 0}
+        rew = {}
+        for agent in self.world.agents:
+            rew[agent.idx] = 0
+        rew[self.world.planner.idx] = 0
 
         def crra_nonlinearity(x, eta):
             # Reference: https://en.wikipedia.org/wiki/Isoelastic_utility
@@ -1586,7 +1615,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             self.weightage_on_marginal_agent_economic_index,
             marginal_agent_economic_index,
         )
-        rew["a"] = agent_rewards / self.reward_normalization_factor
+        # rew["a"] = agent_rewards / self.reward_normalization_factor
+        for agent in self.world.agents:
+            rew[agent.idx] = agent_rewards[int(agent.idx)] / self.reward_normalization_factor
 
         # Update agent states
         # -------------------
@@ -1627,8 +1658,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             cost_of_subsidy_t = (1 + self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]) *\
                                 np.sum(quantitative_t) + (np.sum(subsidy_t) - np.sum(quantitative_t)) * \
                                 (1 + self.us_treasury_yield_long_term) - \
-                                (self.world.global_state["US GDP"][self.world.timestep] - self.world.global_state["US GDP"][self.world.timestep - 1]) + \
-                                (self.world.global_state["US GDP"][self.world.timestep] * self.world.global_state["US Tax Wedge"][self.world.timestep]) * 0.1
+                                (self.world.global_state["US GDP"][self.world.timestep] - self.world.global_state["US GDP"][self.world.timestep - 1] / 365) + \
+                                (self.world.global_state["US GDP"][self.world.timestep] * self.world.global_state["US Tax Wedge"][self.world.timestep] / 365) * 0.1
         
         us_defense_spending_2019 = self.us_government_defense_spending
         us_imperialism_spending_2019 = self.us_imperialism_level
@@ -1690,7 +1721,27 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             + social_security_poverty_reduction_score + medicare_medicaid_poverty_reduction_score + inflation_score
         
         rew[self.world.planner.idx] = (planner_rewards + other_planner_rewards) / (self.reward_normalization_factor + 4) 
+        print("\nThis timestep: ", self.world.timestep)
+        print("\n------------------")
+        print("US Debt: ", self.world.global_state["US Debt"][self.world.timestep])
+        print("US GDP: ", self.world.global_state["US GDP"][self.world.timestep])
+        print("Post-productivity: ", np.average(self.world.global_state["Postsubsidy Productivity"][self.world.timestep]))
+        if self.world.timestep > 1:
+            print("Post-productivity increase by: ", np.average(self.world.global_state["Postsubsidy Productivity"][self.world.timestep]) \
+                - np.average(self.world.global_state["Postsubsidy Productivity"][self.world.timestep - 1]))
+        print("US Tax Wedge: ", self.world.global_state["US Tax Wedge"][self.world.timestep])
+        print("US Federal Deficit: ", self.world.global_state["US Federal Deficit"][self.world.timestep])
+        print("US Federal Interest Payment: ", self.world.global_state["US Federal Interest Payment"][self.world.timestep])
+        print("US Health Index: ", self.world.planner.state["Health Index"])
+        print("Defense Imperialism Index: ", self.world.planner.state["Defense Imperialism Index"])
+        print("Income Security Index: ", self.world.planner.state["Income Security Index"])
+        print("Social Security Index: ", self.world.planner.state["Social Security Index"])
+        print("Medicare Medicaid Index: ", self.world.planner.state["Medicare Medicaid Index"])
+        print("Inflation Index: ", self.world.planner.state["Inflation Index"])
+        print("Reward: ", rew[self.world.planner.idx])
+        print("------------------\n")
 
+        
         return rew
 
     def additional_reset_steps(self):
@@ -1911,6 +1962,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     (self.episode_length + 1), dtype=dtype
                 )
                 self.world.global_state[key][0] = value
+                self.world.global_state[key][1] = value
             else:
                 self.world.global_state[key] = np.zeros(
                     (self.episode_length + 1, self.num_us_states), dtype=dtype
@@ -2434,7 +2486,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         sumratio = np.zeros_like(b_s)
         for ind in range(b_s.shape[0]):
             N, Nb, nb, Q, ze, Lb = self.solveFiscalTheoryModel(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s[ind])
-            zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt, sumomeg, sumratio[ind] = f_doir_final(H, Nb, nb, N, Q, ze, Lb, t_ipi, t_ix, t_spi, t_sx, alph, omeg, b_s[ind], b_i, shock, rho)
+            zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt, sumomeg, sumratio[ind] = self.f_doir_final(H, Nb, nb, N, Q, ze, Lb, t_ipi, t_ix, t_spi, t_sx, alph, omeg, b_s[ind], b_i, shock, rho)
             sumratio[ind] = sumratio[ind] - fraction_inflated
         return sumratio 
 
@@ -2442,5 +2494,5 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         sumomeg = np.zeros_like(b_i)
         for ind in range(b_i.shape[0]):
             N, Nb, nb, Q, ze, Lb = self.solveFiscalTheoryModel(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i[ind], b_s)
-            zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt, sumomeg[ind], sumratio = f_doir_final(H, Nb, nb, N, Q, ze, Lb, t_ipi, t_ix, t_spi, t_sx, alph, omeg, b_s, b_i[ind], shock, rho)
+            zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt, sumomeg[ind], sumratio = self.f_doir_final(H, Nb, nb, N, Q, ze, Lb, t_ipi, t_ix, t_spi, t_sx, alph, omeg, b_s, b_i[ind], shock, rho)
         return sumomeg

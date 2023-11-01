@@ -529,8 +529,8 @@ class BaseEnvironment(ABC):
         Returns:
             agent (BaseAgent object)
         """
-        print("agent_idx", agent_idx)
-        print("self._agent_lookup", self._agent_lookup)
+        # print("agent_idx", agent_idx)
+        # print("self._agent_lookup", self._agent_lookup)
         agent = self._agent_lookup.get(str(agent_idx), None)
         if agent is None:
             raise ValueError("No agent with associated index {}".format(agent_idx))
@@ -709,8 +709,8 @@ class BaseEnvironment(ABC):
         if self.collate_agent_step_and_reset_data:
             masks = {"a": {}, "p": {}}
         else:
-            for agent in self.all_agents:
-                print("-- agent.idx -- : ", agent.idx)
+            # for agent in self.all_agents:
+            #     print("-- agent.idx -- : ", agent.idx)
             masks = {agent.idx: {} for agent in self.all_agents}
         for component in self._components:
             # Use the component's generate_masks method to get action masks
@@ -967,7 +967,7 @@ class BaseEnvironment(ABC):
         """
         if actions is not None:
             assert isinstance(actions, dict)
-            print("actions", actions)
+            # print("actions", actions)
             self.parse_actions(actions)
 
         if seed_state is not None:
