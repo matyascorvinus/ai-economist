@@ -230,11 +230,9 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
 
                 # Average stringency level is a number calculated from Stringency Level
 
-                self.world.global_state["Average Stringency Level"][
-                    self.world.timestep] = np.mean(self.world.global_state["Stringency Level"][self.world.timestep, agent.idx])
+                self.world.global_state["Average Stringency Level"] = np.mean(self.world.global_state["Stringency Level"][self.world.timestep, agent.idx])
                 # Reduced gdp multiplier is a number calculated from Stringency Level
-                self.world.global_state["Reduced GDP Multiplier"][
-                    self.world.timestep] = \
+                self.world.global_state["Reduced GDP Multiplier"] = \
                     np.mean(self.world.global_state["Stringency Level"][self.world.timestep, agent.idx]
                             * self.reduced_gdp_multiplier)
 
@@ -501,36 +499,6 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
             # "US Government Non Defense Others Spending",
             # Update subsidy - quantitative easing level
             if self.world.timestep + 1 <= self._episode_length:
-                self.world.global_state["US Government Social Security Spending"][
-                    self.world.timestep + 1
-                ] = self.world.global_state["US Government Social Security Spending"][
-                    self.world.timestep
-                ]
-                self.world.global_state["US Government Medicare Medicaid Spending"][
-                    self.world.timestep + 1
-                ] = self.world.global_state["US Government Medicare Medicaid Spending"][
-                    self.world.timestep
-                ]
-                self.world.global_state["US Government Income Security"][
-                    self.world.timestep + 1
-                ] = self.world.global_state["US Government Income Security"][
-                    self.world.timestep 
-                ] 
-                self.world.global_state["US Tax Wedge"][
-                    self.world.timestep + 1
-                ] = self.world.global_state["US Tax Wedge"][
-                    self.world.timestep
-                ]
-                self.world.global_state["US Government Defense Spending"][
-                    self.world.timestep + 1
-                ] = self.world.global_state["US Government Defense Spending"][
-                    self.world.timestep
-                ]
-                self.world.global_state["Federal Reserve Balance Sheet"][
-                    self.world.timestep + 1
-                ] = self.world.global_state["Federal Reserve Balance Sheet"][
-                    self.world.timestep
-                ]
                 hundred_billions_divided_by_365 = 10**9 / 365
                 if subsidy_quantitative_policy_level <= 20:
                     subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level / 20
@@ -555,43 +523,31 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     #     self.world.timestep
                     # ] = daily_statewise_quantitative
                     self.world.planner.state["Federal Reserve Balance Sheet"] += np.sum(daily_statewise_quantitative) 
-                    self.world.global_state["Federal Reserve Balance Sheet"][
-                        self.world.timestep + 1
-                    ] += np.sum(daily_statewise_quantitative)
+                    self.world.global_state["Federal Reserve Balance Sheet"] += np.sum(daily_statewise_quantitative)
                 elif subsidy_quantitative_policy_level > 40 \
                     and subsidy_quantitative_policy_level <= 60:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 50) / 10
-                    self.world.global_state["US Tax Wedge"][
-                        self.world.timestep + 1
-                    ] += subsidy_quantitative_policy_level_frac * 0.1 # increasing 10% in GDP Taxation Wedge
+                    self.world.global_state["US Tax Wedge"] += subsidy_quantitative_policy_level_frac * 0.1 # increasing 10% in GDP Taxation Wedge
                 
                 elif subsidy_quantitative_policy_level > 60 \
                     and subsidy_quantitative_policy_level <= 80:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 70) / 10
-                    self.world.global_state["US Government Defense Spending"][
-                        self.world.timestep + 1
-                    ] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
+                    self.world.global_state["US Government Defense Spending"] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
 
                 elif subsidy_quantitative_policy_level > 90 \
                     and subsidy_quantitative_policy_level <= 100:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 90) / 10
-                    self.world.global_state["US Government Social Security Spending"][
-                        self.world.timestep + 1
-                    ] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
+                    self.world.global_state["US Government Social Security Spending"] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
 
                 elif subsidy_quantitative_policy_level > 100 \
                     and subsidy_quantitative_policy_level <= 120:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 110) / 10
-                    self.world.global_state["US Government Medicare Medicaid Spending"][
-                        self.world.timestep + 1
-                    ] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
+                    self.world.global_state["US Government Medicare Medicaid Spending"] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
                 
                 elif subsidy_quantitative_policy_level > 120 \
                     and subsidy_quantitative_policy_level <= 140:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 130) / 10
-                    self.world.global_state["US Government Income Security"][
-                        self.world.timestep + 1
-                    ] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
+                    self.world.global_state["US Government Income Security"] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
             
 
 

@@ -119,14 +119,14 @@ trainer_config = {
         "policies_to_train": policies_to_train,
         "policy_mapping_fn": policy_mapping_fun,
     },
-    "num_gpus": 0,
-    "log_level": "DEBUG",  # Set the log level
+    "num_gpus": 0, 
+    # "log_level": "DEBUG",  # Set the log level
 }
 
 trainer_config.update(
     {
         "num_workers": 0,
-        "num_envs_per_worker": 1,
+        "num_envs_per_worker": 0,
         # Other training parameters
         # "train_batch_size":  10,
         # "sgd_minibatch_size": 5,
