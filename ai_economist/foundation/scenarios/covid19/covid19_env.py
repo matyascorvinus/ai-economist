@@ -1169,7 +1169,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.world.timestep
             ] * self.world.global_state["US Tax Wedge"][
                     self.world.timestep
-                ] / 365
+                ] / 100 / 365
             federal_tax_revenue = self.world.global_state["US Government Revenue"][
                 self.world.timestep
             ]
@@ -1806,7 +1806,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("US Tax Wedge: ", self.world.global_state["US Tax Wedge"][self.world.timestep])
             print("US Federal Deficit: ", self.world.global_state["US Federal Deficit"][self.world.timestep])
             print("US Federal Interest Payment: ", self.world.global_state["US Federal Interest Payment"][self.world.timestep])
-            print("US Federal Revenue: ", self.world.global_state["US Government Revenue"][
+            print("US Government Revenue: ", self.world.global_state["US Government Revenue"][
                     self.world.timestep
                 ])
             print("US Health Index: ", self.world.planner.state["Health Index"])
