@@ -119,13 +119,13 @@ trainer_config = {
         "policies_to_train": policies_to_train,
         "policy_mapping_fn": policy_mapping_fun,
     },
-    "num_gpus": 0,
-    "log_level": "DEBUG",  # Set the log level
+    "num_gpus": 1, 
+    # "log_level": "DEBUG",  # Set the log level
 }
 
 trainer_config.update(
     {
-        "num_workers": 0,
+        "num_workers": 1,
         "num_envs_per_worker": 1,
         # Other training parameters
         # "train_batch_size":  10,
@@ -154,17 +154,12 @@ trainer = PPOTrainer(
     config=trainer_config,
  
 )
-
-# Number of US states: 51
-# self.us_gdp_2019:  21466585914800.0
-# self.us_federal_deficit:  2465753424.6575336
-# self.us_government_revenue:  9589041095.890411
-# self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
-NUM_ITERS = 100
+ 
+NUM_ITERS = 65
 for iteration in range(NUM_ITERS):
     print(f'********** Iter : {iteration} **********')
     result = trainer.train()
     print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
-    
-checkpoint_path = trainer.save()
-print("Model checkpoint saved at:", checkpoint_path)
+    checkpoint_path = trainer.save()
+    print("Model checkpoint saved at:", checkpoint_path)
+        

@@ -103,4 +103,4 @@ setuptools~=67.4.0
 gym~=0.25.2
 ray~=0.8.4
 torch~=1.10.2
-pycuda~=2021.1
+# pycuda~=2021.1

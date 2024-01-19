@@ -138,7 +138,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         social_security_poverty_reduction = 28000000,
         medicare_medicaid_poverty_reduction = 20000000,
         income_security_poverty_reduction = 9000000,      
-        medicare_for_all_with_current_medicaid_2022_maximum = 4.469 * 10**12 / 10**12 + 0.409 * 10**12 / 10**12, # The Costs of a National Single-Payer Healthcare System - Mecartus, with medicaid spending 2019
         ideal_inflation=0.01,  
         social_security_beneficiaries= 64 * 10**6, # https://www.ssa.gov/cgi-bin/currentpay.cgi
         social_security_beneficiaries_growth = 10**6, # https://www.ssa.gov/cgi-bin/currentpay.cgi
@@ -1170,7 +1169,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.world.timestep
             ] * self.world.global_state["US Tax Wedge"][
                     self.world.timestep
-                ] / 100 / 365
+                ] / 365
             federal_tax_revenue = self.world.global_state["US Government Revenue"][
                 self.world.timestep
             ]
@@ -1375,7 +1374,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 ] = self.world.global_state["Output Gap"][
                     self.world.timestep + 1
                 ] / 100 * current_real_potential_gdp + current_real_potential_gdp
-                self.yearCount += 1
+                # self.yearCount += 1
 
 
             # A 2019 study by Congressional Budget Office (CBO) economists Edward Gamber and
