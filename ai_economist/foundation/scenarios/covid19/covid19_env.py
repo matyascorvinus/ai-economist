@@ -1169,7 +1169,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.world.timestep
             ] * self.world.global_state["US Tax Wedge"][
                     self.world.timestep
-                ] / 100 / 365
+                ] / 365
             federal_tax_revenue = self.world.global_state["US Government Revenue"][
                 self.world.timestep
             ]
