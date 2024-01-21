@@ -353,9 +353,9 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
         self.max_daily_subsidy_per_state = (
             self.world.us_state_population * self.max_annual_monetary_unit_per_person / 365
         )
-        # the FED can set a quantitative policy of 10 times the max subsidy amount
+        # the FED can set a quantitative policy with the same maximum limit as the subsidy
         self.max_daily_quantitative_per_state = (
-            self.world.us_state_population * self.max_annual_monetary_unit_per_person * 10 / 365
+            self.world.us_state_population * self.max_annual_monetary_unit_per_person / 365
         )
 
     def get_n_actions(self, agent_cls_name):
@@ -527,7 +527,14 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                 elif subsidy_quantitative_policy_level > 40 \
                     and subsidy_quantitative_policy_level <= 60:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 50) / 10
-                    self.world.global_state["US Tax Wedge"] += subsidy_quantitative_policy_level_frac * 0.1 # increasing 10% in GDP Taxation Wedge
+                    if (subsidy_quantitative_policy_level_frac < 0):
+                        # Taxation cannot be lower than 10% of GDP, so the federal government cannot lower the tax if the tax wedge is 10% already
+                        if self.world.global_state["US Tax Wedge"] + subsidy_quantitative_policy_level_frac * 0.1 >= 0.1:
+                            self.world.global_state["US Tax Wedge"] += subsidy_quantitative_policy_level_frac * 0.1 # increasing 10% in GDP Taxation Wedge
+                    else:
+                        # Taxation cannot be higher than 70% of GDP as it is the realistic cap of how much the government can get
+                        if self.world.global_state["US Tax Wedge"] + subsidy_quantitative_policy_level_frac * 0.1 <= 0.7:
+                            self.world.global_state["US Tax Wedge"] += subsidy_quantitative_policy_level_frac * 0.1 # increasing 10% in GDP Taxation Wedge
                 
                 elif subsidy_quantitative_policy_level > 60 \
                     and subsidy_quantitative_policy_level <= 80:

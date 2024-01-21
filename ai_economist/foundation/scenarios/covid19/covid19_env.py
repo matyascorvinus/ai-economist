@@ -138,7 +138,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         social_security_poverty_reduction = 28000000,
         medicare_medicaid_poverty_reduction = 20000000,
         income_security_poverty_reduction = 9000000,      
-        medicare_for_all_with_current_medicaid_2022_maximum = 4.469 * 10**12 / 10**12 + 0.409 * 10**12 / 10**12, # The Costs of a National Single-Payer Healthcare System - Mecartus, with medicaid spending 2019
         ideal_inflation=0.01,  
         social_security_beneficiaries= 64 * 10**6, # https://www.ssa.gov/cgi-bin/currentpay.cgi
         social_security_beneficiaries_growth = 10**6, # https://www.ssa.gov/cgi-bin/currentpay.cgi
@@ -1120,7 +1119,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             # Federal tax revenue 
 
             # Considered the tax revenue is attached with the productivity
-            self.world.global_state["US Government Revenue"]= self.world.global_state["US GDP"] * self.world.global_state["US Tax Wedge"] / 100 / 365
+            self.world.global_state["US Government Revenue"] = self.world.global_state["US GDP"] * self.world.global_state["US Tax Wedge"] / 365
             federal_tax_revenue = self.world.global_state["US Government Revenue"]
             # Subsidies
             # ---------
@@ -1166,7 +1165,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                                                             + self.world.global_state["US Government Medicare Medicaid Spending"] \
                                                             + self.world.global_state["US Government Income Security"] \
                                                             + np.sum(daily_statewise_subsidy_t) + federal_interest_payment - federal_tax_revenue
-
+            if self.world.timestep + 1 <= self.episode_length:
+                self.world.global_state["US Debt"] += self.world.global_state["US Federal Deficit"]
+                if self.world.global_state["US Debt"] <= 0:
+                    self.world.global_state["US Debt"] = 0
  
             # TODO: Later implement Federal Reserve
             # if self.world.global_state["Inflation"] * 100 > 0.03:
@@ -1214,12 +1216,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 # horizon of simulation is the episode length 
 
                 fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
-                total_deficit = np.sum(self.world.global_state["US Federal Deficit"])
+                total_deficit = self.world.global_state["US Debt"] - self.us_government_debt
                 shock_determinator = -1 if total_deficit < 0 else 1
-                total_federal_interest_payment = np.sum(self.world.global_state["US Federal Interest Payment"])
-                fiscal_shock = shock_determinator * (np.abs(total_deficit) - total_federal_interest_payment) / self.world.global_state["US GDP"]
+                total_federal_interest_payment = self.world.global_state["US Federal Interest Payment"] if \
+                    self.world.global_state["US Federal Interest Payment"] > 0 else 0
+                fiscal_shock = shock_determinator * (np.abs(total_deficit) - np.abs(total_federal_interest_payment)) / self.world.global_state["US GDP"]
                 monetary_shock = -(self.world.global_state["Federal Reserve Balance Sheet"] - self.fed_reserve_balance_sheet) / self.world.global_state["US GDP"]
-                self.fed_reserve_balance_sheet = self.world.global_state["Federal Reserve Balance Sheet"]
                 H = 10 # horizon of simulation is the episode length - 10 years
 
                 shock = [monetary_shock, fiscal_shock] # fiscal shock. 0.01 is 1% of GDP.
@@ -1281,8 +1283,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 #     curr_t
                 # ] * (np.average(GDP_growth))
 
-                self.world.global_state["US GDP"] = self.world.global_state["Output Gap"] / 100 * current_real_potential_gdp + current_real_potential_gdp
-                self.yearCount += 1
+                self.world.global_state["US GDP"] = self.world.global_state["Output Gap"] * current_real_potential_gdp 
+                # self.yearCount += 1
 
 
             # A 2019 study by Congressional Budget Office (CBO) economists Edward Gamber and
@@ -1712,7 +1714,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("US Tax Wedge: ", self.world.global_state["US Tax Wedge"])
             print("US Federal Deficit: ", self.world.global_state["US Federal Deficit"])
             print("US Federal Interest Payment: ", self.world.global_state["US Federal Interest Payment"])
-            print("US Federal Revenue: ", self.world.global_state["US Government Revenue"])
+            print("US Government Revenue: ", self.world.global_state["US Government Revenue"])
             print("US Health Index: ", self.world.planner.state["Health Index"])
 
             print("Defense Imperialism Spending: ", USDefenseSpending)
