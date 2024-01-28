@@ -1697,7 +1697,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             + social_security_poverty_reduction_score + medicare_medicaid_poverty_reduction_score + inflation_score
         
         rew[self.world.planner.idx] = (planner_rewards + other_planner_rewards) / (self.reward_normalization_factor + 4) 
-        if self.world.timestep % 365 == 0: # or self.world.timestep == 405 or self.world.timestep == 1:
+        if self.world.timestep % 40 == 0: # or self.world.timestep == 405 or self.world.timestep == 1:
             print("\nThis timestep: ", self.world.timestep)
             print("\n------------------")
             print("Observations: ", list(self.world.global_state.keys()))
