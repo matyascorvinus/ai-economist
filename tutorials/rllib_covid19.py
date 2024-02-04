@@ -162,15 +162,15 @@ trainer = PPOTrainer(
 # self.us_government_revenue:  9589041095.890411
 # self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
 NUM_ITERS = 20
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-01-31_07-28-17lbwgq181/checkpoint_65/checkpoint-65')
-for iteration in range(NUM_ITERS):
-    print(f'********** Iter : {iteration} **********')
-    result = trainer.train()
-    print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
-    checkpoint_path = trainer.save()
-    print("Model checkpoint saved at:", checkpoint_path)
+# trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-01-31_07-28-17lbwgq181/checkpoint_65/checkpoint-65')
+# for iteration in range(NUM_ITERS):
+#     print(f'********** Iter : {iteration} **********')
+#     result = trainer.train()
+#     print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
+#     checkpoint_path = trainer.save()
+#     print("Model checkpoint saved at:", checkpoint_path)
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-# trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-01-22_18-12-21imf57ohn/checkpoint_65/checkpoint-65')
-# trainer.train()
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-02_07-11-5173tn6fis/checkpoint_85/checkpoint-85')
+trainer.train()

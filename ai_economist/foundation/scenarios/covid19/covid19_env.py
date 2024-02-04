@@ -7,7 +7,7 @@
 import json
 import os
 from datetime import datetime, timedelta
-
+import csv
 import GPUtil
 import numpy as np
 
@@ -19,6 +19,16 @@ from sklearn.linear_model import LinearRegression
 import math
 from scipy.optimize import fsolve
 
+csv_file_path = 'simulation_results.csv'
+headers = [
+    "Timestep", "Susceptibles", "Infected", "Recovered", "US Debt", "US GDP", 
+    "Post-productivity", "Current Subsidy Quantitative Policy Level",
+    "Total Subsidies", "US Tax Wedge", "US Federal Deficit", "US Federal Interest Payment",
+    "US Government Revenue", "US Health Index", "Defense Imperialism Spending", "Income Security Spending",
+    "Social Security Spending", "Medicare Medicaid Spending", "Federal Reserve Balance Sheet", "Inflation",
+    "Defense Imperialism Index", "Income Security Index", "Social Security Index", "Medicare Medicaid Index",
+    "Inflation Index", "Reward", "Reward Social Security"
+]
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
@@ -1744,6 +1754,48 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("Reward: ", rew[self.world.planner.idx]) 
             print("Reward Social Security: ", planner_rewards) 
             print("------------------\n")
+            with open(csv_file_path, mode='a', newline='') as file:
+                writer = csv.DictWriter(file, fieldnames=headers)
+                
+                # Write the header only once, assuming this script may be run multiple times
+                if file.tell() == 0:
+                    writer.writeheader()
+                
+                # Assuming this is inside your simulation loop
+                data = {
+                    "Timestep": self.world.timestep,
+                    "Susceptibles": len(self.world.global_state["Susceptible"]),
+                    "Infected": len(self.world.global_state["Infected"]),
+                    "Recovered": len(self.world.global_state["Recovered"]),
+                    "US Debt": self.world.global_state["US Debt"],
+                    "US GDP": self.world.global_state["US GDP"],
+                    "Post-productivity": np.average(self.world.global_state["Postsubsidy Productivity"][self.world.timestep]),
+                    "Current Subsidy Quantitative Policy Level": self.world.planner.state["Current Subsidy Quantitative Policy Level"],
+                    "Total Subsidies": self.world.planner.state["Total Subsidy"],
+                    "US Tax Wedge": self.world.global_state["US Tax Wedge"],
+                    "US Federal Deficit": self.world.global_state["US Federal Deficit"],
+                    "US Federal Interest Payment": self.world.global_state["US Federal Interest Payment"],
+                    "US Government Revenue": self.world.global_state["US Government Revenue"],
+                    "US Health Index": self.world.planner.state["Health Index"],
+                    "Defense Imperialism Spending": USDefenseSpending,
+                    "Income Security Spending": USIncomeSecurity,
+                    "Social Security Spending": USSocialSecuritySpending,
+                    "Medicare Medicaid Spending": USMedicareMedicaidSpending,
+                    "Federal Reserve Balance Sheet": self.world.global_state["Federal Reserve Balance Sheet"],
+                    "Inflation": US_Inflation,
+                    "Defense Imperialism Index": self.world.planner.state["Defense Imperialism Index"],
+                    "Income Security Index": self.world.planner.state["Income Security Index"],
+                    "Social Security Index": self.world.planner.state["Social Security Index"],
+                    "Medicare Medicaid Index": self.world.planner.state["Medicare Medicaid Index"],
+                    "Inflation Index": self.world.planner.state["Inflation Index"],
+                    "Reward": rew[self.world.planner.idx],
+                    "Reward Social Security": planner_rewards
+                }
+                
+                # Write the data for this timestep or run
+                writer.writerow(data)
+
+            print(f"Simulation data saved to {csv_file_path}")
 
         
         return rew
