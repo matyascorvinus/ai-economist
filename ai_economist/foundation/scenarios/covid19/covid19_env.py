@@ -1142,7 +1142,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             #     self.world.planner.state["Current Subsidy Quantitative Policy Level"] <= 50):
             #     daily_statewise_subsidy_t += (self.world.global_state["US Tax Wedge"] - \
             #         self.world.global_state["US Tax Wedge"]) * self.world.global_state["US GDP"] / 365
-                
+            print("Reduced GDP Multiplier: ", self.world.global_state["Reduced GDP Multiplier"])
+            print("Productivity before Subsidy: ", productivity_t)
+            print("Average Subsidy: ", np.mean(daily_statewise_subsidy_t))
             postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"]) + \
                                          daily_statewise_subsidy_t * \
                                             self.us_government_spending_economic_multiplier

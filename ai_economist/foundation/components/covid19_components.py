@@ -310,7 +310,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
     def __init__(
         self,
         *base_component_args,
-        subsidy_quantitative_policy_interval=90,
+        subsidy_quantitative_policy_interval=30, #90,
         num_subsidy_quantitative_policy_level=140,
         max_annual_monetary_unit_per_person=20000,
         **base_component_kwargs,
