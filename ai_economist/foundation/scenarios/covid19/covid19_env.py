@@ -21,13 +21,13 @@ from scipy.optimize import fsolve
 
 csv_file_path = 'simulation_results.csv'
 headers = [
-    "Month", "Susceptibles", "Infected", "Recovered", "US Debt", "US GDP", 
+    "Month", "Susceptibles", "Infected", "Recovered", "Vaccinated (% of population)", "Deaths (thousands)" ,"Mean Unemployment Rate (%)","US Debt", "US GDP", 
     "Post-productivity", "Current Subsidy Quantitative Policy Level",
     "Total Subsidies", "US Tax Wedge", "US Federal Deficit", "US Federal Interest Payment",
     "US Government Revenue", "US Health Index", "Defense Imperialism Spending", "Income Security Spending",
     "Social Security Spending", "Medicare Medicaid Spending", "Federal Reserve Balance Sheet", "Inflation",
     "Defense Imperialism Index", "Income Security Index", "Social Security Index", "Medicare Medicaid Index",
-    "Inflation Index", "US Treasury Yield Index", "Reward", "Reward Social Welfare"
+    "Inflation Index", "US Treasury Yield Index", "Health Index", "Economic Index", "Reward", "Reward Social Welfare"
 ]
 
 try:
@@ -1289,7 +1289,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 self.world.global_state["Federal Reserve Fund Rate"] = self.world.global_state["Federal Reserve Fund Rate"] + (it[1])
                 self.world.global_state["US Treasury Yield Long Term"] = self.world.global_state["US Treasury Yield Long Term"] + (yldt[1])
 
-                self.world.global_state["Inflation"] = self.world.global_state["Inflation"] - (pit[1])
+                self.world.global_state["Inflation"] = self.world.global_state["Inflation"] + (pit[1])
 
                 self.world.global_state["Output Gap"] = self.world.global_state["Output Gap"] + (xt[1])
                 
@@ -1729,15 +1729,19 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("Susceptibles: ", np.sum(self.world.global_state["Susceptible"]))
             print("Infected: ", np.sum(self.world.global_state["Infected"]))
             print("Recovered: ", np.sum(self.world.global_state["Recovered"]))
+            print("Vaccinated (% of population): ", 
+                  np.sum(self.world.global_state["Vaccinated"][self.world.timestep], axis=0) / self.us_population * 100)
+            print("Deaths (thousands): ", np.sum(self.world.global_state["Deaths"][self.world.timestep], axis=0) / 1e3)
+            print("Mean Unemployment Rate (%): ", np.mean(np.sum(self.world.global_state["Unemployed"][1:], axis=1) / self.us_population, axis=0) * 100)
             print("US Debt: ", self.world.global_state["US Debt"])
             print("US GDP: ", self.world.global_state["US GDP"])
             print("Post-productivity: ", np.average(self.world.global_state["Postsubsidy Productivity"][self.world.timestep]))
-            print("Total Post-productivity: ", np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep]))
+            print("Total Post-productivity: ", np.sum(self.world.global_state["Postsubsidy Productivity"][1:], axis=(0, 1)) / 1e12)
             if self.world.timestep > 1:
                 print("Post-productivity increase by: ", np.average(self.world.global_state["Postsubsidy Productivity"][self.world.timestep]) \
                     - np.average(self.world.global_state["Postsubsidy Productivity"][self.world.timestep - 1]))
             print("Current Subsidy Quantitative Policy Level: ", self.world.planner.state["Current Subsidy Quantitative Policy Level"])
-            print("Total Subsidies", self.world.planner.state["Total Subsidy"])
+            print("Total Amount Subsidized (trillion $): ", np.sum(self.world.global_state["Subsidy"][1:], axis=(0, 1)) / 1e12)
             print("US Tax Wedge: ", self.world.global_state["US Tax Wedge"])
             print("US Federal Deficit: ", self.world.global_state["US Federal Deficit"])
             print("US Federal Interest Payment: ", self.world.global_state["US Federal Interest Payment"])
@@ -1751,13 +1755,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("Medicare Medicaid Spending: ", USMedicareMedicaidSpending)
             print("Federal Reserve Balance Sheet: ", self.world.global_state["Federal Reserve Balance Sheet"])
             print("Inflation: ", US_Inflation)
-
             print("Defense Imperialism Index: ", self.world.planner.state["Defense Imperialism Index"])
             print("Income Security Index: ", self.world.planner.state["Income Security Index"])
             print("Social Security Index: ", self.world.planner.state["Social Security Index"])
             print("Medicare Medicaid Index: ", self.world.planner.state["Medicare Medicaid Index"])
             print("Inflation Index: ", self.world.planner.state["Inflation Index"])
             print("US Treasury Yield Index: ", self.world.planner.state["US Treasury Yield Index"])
+            print("Health Index: ", self.world.planner.state["Health Index"])
+            print("Economic Index: ", self.world.planner.state["Economic Index"])
             print("Reward: ", rew[self.world.planner.idx]) 
             print("Reward Social Welfare: ", planner_rewards) 
             print("Reward Inflation Score: ", inflation_score)
@@ -1777,6 +1782,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         "Susceptibles": np.sum(self.world.global_state["Susceptible"]),
                         "Infected": np.sum(self.world.global_state["Infected"]),
                         "Recovered": np.sum(self.world.global_state["Recovered"]),
+                        "Vaccinated (% of population)": np.sum(self.world.global_state["Vaccinated"][self.world.timestep], axis=0) / self.us_population * 100,
+                        "Deaths (thousands)": np.sum(self.world.global_state["Deaths"][self.world.timestep], axis=0) / 1e3,
+                        "Mean Unemployment Rate (%)": np.mean(np.sum(self.world.global_state["Unemployed"][1:], axis=1) / self.us_population, axis=0) * 100,
                         "US Debt": self.world.global_state["US Debt"],
                         "US GDP": self.world.global_state["US GDP"],
                         "Post-productivity": np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep]),
@@ -1799,6 +1807,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         "Medicare Medicaid Index": self.world.planner.state["Medicare Medicaid Index"],
                         "Inflation Index": self.world.planner.state["Inflation Index"],
                         "US Treasury Yield Index": self.world.planner.state["US Treasury Yield Index"],
+                        "Health Index":  self.world.planner.state["Health Index"],
+                        "Economic Index": self.world.planner.state["Economic Index"],
                         "Reward": rew[self.world.planner.idx],
                         "Reward Social Welfare": planner_rewards
                     }
