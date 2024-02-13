@@ -43,6 +43,8 @@ env_config_dict = {
     # use_real_world_data=False, SIR and economy dynamics are still
     # driven by fitted models.
     "use_real_world_policies": False,
+    "csv_validation": True,
+
 
     # A factor indicating how much more the
     # states prioritize health (roughly speaking, loss of lives due to
@@ -171,5 +173,5 @@ trainer = PPOTrainer(
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-01-31_07-28-17lbwgq181/checkpoint_65/checkpoint-65')
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-07_10-11-58x_kh6mtg/checkpoint_40/checkpoint-40')
 trainer.train()

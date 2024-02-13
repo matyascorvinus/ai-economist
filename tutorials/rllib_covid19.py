@@ -43,6 +43,7 @@ env_config_dict = {
     # use_real_world_data=False, SIR and economy dynamics are still
     # driven by fitted models.
     "use_real_world_policies": False,
+    "csv_validation": False,
 
     # A factor indicating how much more the
     # states prioritize health (roughly speaking, loss of lives due to
@@ -161,16 +162,17 @@ trainer = PPOTrainer(
 # self.us_federal_deficit:  2465753424.6575336
 # self.us_government_revenue:  9589041095.890411
 # self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
-NUM_ITERS = 20
+NUM_ITERS = 40
 # trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-01-31_07-28-17lbwgq181/checkpoint_65/checkpoint-65')
-# for iteration in range(NUM_ITERS):
-#     print(f'********** Iter : {iteration} **********')
-#     result = trainer.train()
-#     print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
-#     checkpoint_path = trainer.save()
-#     print("Model checkpoint saved at:", checkpoint_path)
+for iteration in range(NUM_ITERS):
+    print(f'********** Iter : {iteration} **********')
+    result = trainer.train()
+    print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
+    checkpoint_path = trainer.save()
+    print("Model checkpoint saved at:", checkpoint_path)
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-02_07-11-5173tn6fis/checkpoint_85/checkpoint-85')
-trainer.train()
+# trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-02_07-11-5173tn6fis/checkpoint_85/checkpoint-85')
+# result = trainer.train()
+# print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')

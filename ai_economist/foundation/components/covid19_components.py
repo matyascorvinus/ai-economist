@@ -345,7 +345,9 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
 
     def get_additional_state_fields(self, agent_cls_name):
         if agent_cls_name == "BasicPlanner":
-            return {"Federal Reserve Balance Sheet": 0, "Total Subsidy": 0, "Current Subsidy Quantitative Policy Level": 0}
+            return {"Federal Reserve Balance Sheet": np.array([0]).astype(
+                np.float32
+            ), "Total Subsidy": 0, "Current Subsidy Quantitative Policy Level": 0}
         return {}
 
     def additional_reset_steps(self):
@@ -489,7 +491,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                 subsidy_quantitative_policy_level
             ).astype(self.np_int_dtype)
             if self.world.timestep == 0 and self.world.global_state["Federal Reserve Balance Sheet"] is not None:
-                self.world.planner.state["Federal Reserve Balance Sheet"] = self.world.global_state["Federal Reserve Balance Sheet"]
+                self.world.planner.state["Federal Reserve Balance Sheet"] += self.world.global_state["Federal Reserve Balance Sheet"]
 
 
             # "US Tax Wedge"
@@ -522,7 +524,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     # self.world.global_state["Quantitative"][
                     #     self.world.timestep
                     # ] = daily_statewise_quantitative
-                    self.world.planner.state["Federal Reserve Balance Sheet"] += np.sum(daily_statewise_quantitative) 
+                    self.world.planner.state["Federal Reserve Balance Sheet"] += (self.world.global_state["Federal Reserve Balance Sheet"] + np.sum(daily_statewise_quantitative)) 
                     self.world.global_state["Federal Reserve Balance Sheet"] += np.sum(daily_statewise_quantitative)
                 elif subsidy_quantitative_policy_level > 40 \
                     and subsidy_quantitative_policy_level <= 60:
