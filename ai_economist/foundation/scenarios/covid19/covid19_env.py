@@ -198,7 +198,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 current_dir, "../../../datasets/covid19_datasets/data_and_fitted_params"
             )
         else:
-            self.path_to_data_and_fitted_params = path_to_data_and_fitted_params
+            current_dir = os.path.dirname(__file__)
+            self.path_to_data_and_fitted_params = os.path.join(
+                current_dir, path_to_data_and_fitted_params
+            ) 
 
         print(
             "Loading real-world data from {}".format(
@@ -1727,8 +1730,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("\n------------------")
             print("Observations: ", list(self.world.global_state.keys()))
             print("Susceptibles: ", np.sum(self.world.global_state["Susceptible"]))
-            print("Infected: ", np.sum(self.world.global_state["Infected"]))
-            print("Recovered: ", np.sum(self.world.global_state["Recovered"]))
+            print("Infected: ", np.sum(self.world.global_state["Infected"][self.world.timestep]))
+            print("Recovered: ", np.sum(self.world.global_state["Recovered"][self.world.timestep]))
             print("Vaccinated (% of population): ", 
                   np.sum(self.world.global_state["Vaccinated"][self.world.timestep], axis=0) / self.us_population * 100)
             print("Deaths (thousands): ", np.sum(self.world.global_state["Deaths"][self.world.timestep], axis=0) / 1e3)
@@ -1779,15 +1782,15 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     # Assuming this is inside your simulation loop
                     data = {
                         "Month": self.world.timestep / 30,
-                        "Susceptibles": np.sum(self.world.global_state["Susceptible"]),
-                        "Infected": np.sum(self.world.global_state["Infected"]),
-                        "Recovered": np.sum(self.world.global_state["Recovered"]),
+                        "Susceptibles": np.sum(self.world.global_state["Susceptible"][self.world.timestep]),
+                        "Infected": np.sum(self.world.global_state["Infected"][self.world.timestep]),
+                        "Recovered": np.sum(self.world.global_state["Recovered"][self.world.timestep]),
                         "Vaccinated (% of population)": np.sum(self.world.global_state["Vaccinated"][self.world.timestep], axis=0) / self.us_population * 100,
                         "Deaths (thousands)": np.sum(self.world.global_state["Deaths"][self.world.timestep], axis=0) / 1e3,
                         "Mean Unemployment Rate (%)": np.mean(np.sum(self.world.global_state["Unemployed"][1:], axis=1) / self.us_population, axis=0) * 100,
                         "US Debt": self.world.global_state["US Debt"],
                         "US GDP": self.world.global_state["US GDP"],
-                        "Post-productivity": np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep]),
+                        "Post-productivity": np.sum(self.world.global_state["Postsubsidy Productivity"][1:], axis=(0, 1)) / 1e12,
                         "Current Subsidy Quantitative Policy Level": self.world.planner.state["Current Subsidy Quantitative Policy Level"],
                         "Total Subsidies": self.world.planner.state["Total Subsidy"],
                         "US Tax Wedge": self.world.global_state["US Tax Wedge"],

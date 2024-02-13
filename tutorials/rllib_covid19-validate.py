@@ -1,3 +1,5 @@
+import os
+path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-01"
 env_config_dict = {
     # Scenario name - determines which scenario class to use
     "scenario_name": "CovidAndEconomySimulation",
@@ -31,7 +33,7 @@ env_config_dict = {
     # Date (YYYY-MM-DD) to start the simulation.
     "start_date": "2020-03-22",
     # How long to run the simulation for (in days)
-    "episode_length": 405,
+    "episode_length": 1014, # From 2020-03-22 to 2022-12-31
 
     # use_real_world_data (bool): Replay what happened in the real world.
     # Real-world data comprises SIR (susceptible/infected/recovered),
@@ -66,7 +68,7 @@ env_config_dict = {
     # For details on obtaining these parameters, please see the notebook
     # "ai-economist-foundation/ai_economist/datasets/covid19_datasets/
     # gather_real_world_data_and_fit_parameters.ipynb".
-    "path_to_data_and_fitted_params": "",
+    "path_to_data_and_fitted_params": path_to_data_and_fitted_params,
 
     # Economy-related parameters
     # Fraction of people infected with COVID-19. Infected people don't work.
