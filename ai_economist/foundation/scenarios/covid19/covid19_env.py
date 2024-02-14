@@ -22,7 +22,7 @@ from scipy.optimize import fsolve
 csv_file_path = 'simulation_results.csv'
 headers = [
     "Month", "Susceptibles", "Infected", "Recovered", "Vaccinated (% of population)", "Deaths (thousands)" ,"Mean Unemployment Rate (%)","US Debt", "US GDP", 
-    "Post-productivity", "Current Subsidy Quantitative Policy Level",
+    "Post-productivity (trillion $)", "Current Subsidy Quantitative Policy Level",
     "Total Subsidies", "US Tax Wedge", "US Federal Deficit", "US Federal Interest Payment",
     "US Government Revenue", "US Health Index", "Defense Imperialism Spending", "Income Security Spending",
     "Social Security Spending", "Medicare Medicaid Spending", "Federal Reserve Balance Sheet", "Inflation",
@@ -1669,7 +1669,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         other_planner_rewards = 0
         if self.world.timestep % 365 == 0 and self.world.timestep > 0:
             inflation_score = -US_Inflation / self.ideal_inflation
-            us_treasury_yield_long_term_score = -(self.world.global_state["US Treasury Yield Long Term"] - self.us_treasury_yield_long_term)
+            us_treasury_yield_long_term_score = -(self.world.global_state["US Treasury Yield Long Term"] / self.us_treasury_yield_long_term)
             us_imperialism_level_score = np.sum(USDefenseSpending) / self.max_us_imperialism_level_spending_required * \
                 self.max_us_imperialism_level
             if us_imperialism_level_score > self.max_us_imperialism_level: 
@@ -1790,7 +1790,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         "Mean Unemployment Rate (%)": np.mean(np.sum(self.world.global_state["Unemployed"][1:], axis=1) / self.us_population, axis=0) * 100,
                         "US Debt": self.world.global_state["US Debt"],
                         "US GDP": self.world.global_state["US GDP"],
-                        "Post-productivity": np.sum(self.world.global_state["Postsubsidy Productivity"][1:], axis=(0, 1)) / 1e12,
+                        "Post-productivity (trillion $)": np.sum(self.world.global_state["Postsubsidy Productivity"][1:], axis=(0, 1)) / 1e12,
                         "Current Subsidy Quantitative Policy Level": self.world.planner.state["Current Subsidy Quantitative Policy Level"],
                         "Total Subsidies": self.world.planner.state["Total Subsidy"],
                         "US Tax Wedge": self.world.global_state["US Tax Wedge"],
