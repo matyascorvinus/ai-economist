@@ -1133,8 +1133,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             # Federal tax revenue 
 
             # Considered the tax revenue is attached with the productivity
-            self.world.global_state["US Government Revenue"] = self.world.global_state["US GDP"] * self.world.global_state["US Tax Wedge"] / 365
-            federal_tax_revenue = self.world.global_state["US Government Revenue"]
+            self.world.global_state["US Government Revenue"][self.world.timestep] = self.world.global_state["US GDP"] * self.world.global_state["US Tax Wedge"] / 365
+            federal_tax_revenue = self.world.global_state["US Government Revenue"][self.world.timestep]
             # Subsidies
             # ---------
             # Add federal government subsidy to productivity
@@ -1176,10 +1176,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 federal_interest_payment = ((self.world.global_state["US Debt"] - quantitative_amount) * self.world.global_state["US Treasury Yield Long Term"] + quantitative_amount * self.world.global_state["Federal Reserve Fund Rate"]) / 365
             
             self.world.global_state["US Federal Interest Payment"] = federal_interest_payment
-            self.world.global_state["US Federal Deficit"] = self.world.global_state["US Government Defense Spending"] \
-                                                            + self.world.global_state["US Government Social Security Spending"] \
-                                                            + self.world.global_state["US Government Medicare Medicaid Spending"] \
-                                                            + self.world.global_state["US Government Income Security"] \
+            self.world.global_state["US Federal Deficit"] = self.world.global_state["US Government Defense Spending"][self.world.timestep] \
+                                                            + self.world.global_state["US Government Social Security Spending"][self.world.timestep] \
+                                                            + self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] \
+                                                            + self.world.global_state["US Government Income Security"][self.world.timestep] \
                                                             + np.sum(daily_statewise_subsidy_t) + federal_interest_payment - federal_tax_revenue
             if self.world.timestep + 1 <= self.episode_length:
                 self.world.global_state["US Debt"] += self.world.global_state["US Federal Deficit"]
@@ -1735,7 +1735,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("Vaccinated (% of population): ", 
                   np.sum(self.world.global_state["Vaccinated"][self.world.timestep], axis=0) / self.us_population * 100)
             print("Deaths (thousands): ", np.sum(self.world.global_state["Deaths"][self.world.timestep], axis=0) / 1e3)
-            print("Mean Unemployment Rate (%): ", np.mean(np.sum(self.world.global_state["Unemployed"][1:], axis=1) / self.us_population, axis=0) * 100)
+            print("Mean Unemployment Rate (%): ", self.world.planner.state["Total Unemployed"] / self.us_population * 100)
             print("US Debt: ", self.world.global_state["US Debt"])
             print("US GDP: ", self.world.global_state["US GDP"])
             print("Post-productivity: ", np.average(self.world.global_state["Postsubsidy Productivity"][self.world.timestep]))
@@ -1746,16 +1746,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("Current Subsidy Quantitative Policy Level: ", self.world.planner.state["Current Subsidy Quantitative Policy Level"])
             print("Total Amount Subsidized (trillion $): ", np.sum(self.world.global_state["Subsidy"][1:], axis=(0, 1)) / 1e12)
             print("US Tax Wedge: ", self.world.global_state["US Tax Wedge"])
-            print("US Federal Deficit: ", self.world.global_state["US Federal Deficit"])
+            print("US Federal Deficit: ", (self.world.global_state["US Federal Deficit"]))
             print("US Federal Interest Payment: ", self.world.global_state["US Federal Interest Payment"])
-            print("US Government Revenue: ", self.world.global_state["US Government Revenue"])
+            print("US Government Revenue: ", np.sum(self.world.global_state["US Government Revenue"]))
             print("US Health Index: ", self.world.planner.state["Health Index"])
 
             print("Reduced GDP Multiplier: ", self.world.global_state["Reduced GDP Multiplier"])  
-            print("Defense Imperialism Spending: ", USDefenseSpending)
-            print("Income Security Spending: ", USIncomeSecurity)
-            print("Social Security Spending: ", USSocialSecuritySpending)
-            print("Medicare Medicaid Spending: ", USMedicareMedicaidSpending)
+            print("Defense Imperialism Spending: ", np.sum(USDefenseSpending))
+            print("Income Security Spending: ", np.sum(USIncomeSecurity))
+            print("Social Security Spending: ", np.sum(USSocialSecuritySpending))
+            print("Medicare Medicaid Spending: ", np.sum(USMedicareMedicaidSpending))
             print("Federal Reserve Balance Sheet: ", self.world.global_state["Federal Reserve Balance Sheet"])
             print("Inflation: ", US_Inflation)
             print("Defense Imperialism Index: ", self.world.planner.state["Defense Imperialism Index"])
@@ -1787,21 +1787,21 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         "Recovered": np.sum(self.world.global_state["Recovered"][self.world.timestep]),
                         "Vaccinated (% of population)": np.sum(self.world.global_state["Vaccinated"][self.world.timestep], axis=0) / self.us_population * 100,
                         "Deaths (thousands)": np.sum(self.world.global_state["Deaths"][self.world.timestep], axis=0) / 1e3,
-                        "Mean Unemployment Rate (%)": np.mean(np.sum(self.world.global_state["Unemployed"][1:], axis=1) / self.us_population, axis=0) * 100,
+                        "Mean Unemployment Rate (%)": self.world.planner.state["Total Unemployed"] / self.us_population * 100,
                         "US Debt": self.world.global_state["US Debt"],
                         "US GDP": self.world.global_state["US GDP"],
                         "Post-productivity (trillion $)": np.sum(self.world.global_state["Postsubsidy Productivity"][1:], axis=(0, 1)) / 1e12,
                         "Current Subsidy Quantitative Policy Level": self.world.planner.state["Current Subsidy Quantitative Policy Level"],
                         "Total Subsidies": self.world.planner.state["Total Subsidy"],
                         "US Tax Wedge": self.world.global_state["US Tax Wedge"],
-                        "US Federal Deficit": self.world.global_state["US Federal Deficit"],
+                        "US Federal Deficit": np.sum(self.world.global_state["US Federal Deficit"]),
                         "US Federal Interest Payment": self.world.global_state["US Federal Interest Payment"],
-                        "US Government Revenue": self.world.global_state["US Government Revenue"],
+                        "US Government Revenue": np.sum(self.world.global_state["US Government Revenue"]),
                         "US Health Index": self.world.planner.state["Health Index"],
-                        "Defense Imperialism Spending": USDefenseSpending,
-                        "Income Security Spending": USIncomeSecurity,
-                        "Social Security Spending": USSocialSecuritySpending,
-                        "Medicare Medicaid Spending": USMedicareMedicaidSpending,
+                        "Defense Imperialism Spending": np.sum(USDefenseSpending),
+                        "Income Security Spending": np.sum(USIncomeSecurity),
+                        "Social Security Spending": np.sum(USSocialSecuritySpending),
+                        "Medicare Medicaid Spending": np.sum(USMedicareMedicaidSpending),
                         "Federal Reserve Balance Sheet": self.world.global_state["Federal Reserve Balance Sheet"],
                         "Inflation": US_Inflation,
                         "Defense Imperialism Index": self.world.planner.state["Defense Imperialism Index"],
@@ -1885,7 +1885,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.set_global_state("US Tax Wedge", value=self.us_tax_wedge, dtype=self.np_float_dtype, planner=True)
         self.set_global_state("US GDP", value=self.us_gdp_2019, planner=True)
         self.set_global_state("US Government Revenue", value=self.us_government_revenue, 
-                              dtype=self.np_float_dtype, planner=True)
+                              dtype=self.np_float_dtype, planner=True, isArray = True)
         self.set_global_state("US Government Mandatory and Discretionary Spending", 
                               value=self.us_government_mandatory_and_discretionary_spending,
                               dtype=self.np_float_dtype, planner=True) 
@@ -1894,10 +1894,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                                 dtype=self.np_float_dtype, planner=True)
         self.set_global_state("US Treasury Yield Long Term", value=self.us_treasury_yield_long_term, planner=True)
 
-        self.set_global_state("US Government Defense Spending", value=self.us_government_defense_spending, dtype=self.np_float_dtype, planner=True)
-        self.set_global_state("US Government Social Security Spending", value=self.us_government_social_security_spending, dtype=self.np_float_dtype, planner=True)
-        self.set_global_state("US Government Medicare Medicaid Spending", value=self.us_government_medicare_medicaid_spending, dtype=self.np_float_dtype, planner=True)
-        self.set_global_state("US Government Income Security", value=self.us_government_income_security, dtype=self.np_float_dtype, planner=True)
+        self.set_global_state("US Government Defense Spending", value=self.us_government_defense_spending, dtype=self.np_float_dtype, 
+                              planner=True, isArray = True)
+        self.set_global_state("US Government Social Security Spending", value=self.us_government_social_security_spending,
+                               dtype=self.np_float_dtype, planner=True, isArray = True)
+        self.set_global_state("US Government Medicare Medicaid Spending", value=self.us_government_medicare_medicaid_spending, 
+                              dtype=self.np_float_dtype, planner=True, isArray = True)
+        self.set_global_state("US Government Income Security", value=self.us_government_income_security, dtype=self.np_float_dtype, 
+                              planner=True, isArray = True)
         self.set_global_state("US Government Social Security Beneficiaries", value=self.social_security_beneficiaries,
                                dtype=self.np_float_dtype, planner=True)
         self.set_global_state("US Medicare Medicaid Beneficiaries", value=self.medicare_medicaid_participants,
@@ -2003,7 +2007,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self._beta_slopes_modulation = 1
         self._unemployment_modulation = 1
 
-    def set_global_state(self, key=None, value=None, t=None, dtype=None, planner = False):
+    def set_global_state(self, key=None, value=None, t=None, dtype=None, planner = False, isArray = False):
         # Use floats by default for the SIR dynamics
         if dtype is None:
             dtype = self.np_float_dtype
@@ -2045,12 +2049,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # If no values are passed, set everything to zeros.
         if key not in self.world.global_state:
             if planner:
-                # self.world.global_state[key] = np.zeros(
-                #     (self.episode_length + 1), dtype=dtype
-                # )
-                # self.world.global_state[key][0] = value
-                # self.world.global_state[key][1] = value\
-                self.world.global_state[key] = value
+                if isArray:
+                    self.world.global_state[key] = np.zeros(
+                        (self.episode_length + 1), dtype=dtype
+                    )
+                    self.world.global_state[key][0] = value
+                    self.world.global_state[key][1] = value
+                else:
+                    self.world.global_state[key] = value
             else:
                 self.world.global_state[key] = np.zeros(
                     (self.episode_length + 1, self.num_us_states), dtype=dtype

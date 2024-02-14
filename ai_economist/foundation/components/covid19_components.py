@@ -492,7 +492,18 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
             ).astype(self.np_int_dtype)
             if self.world.timestep == 0 and self.world.global_state["Federal Reserve Balance Sheet"] is not None:
                 self.world.planner.state["Federal Reserve Balance Sheet"] += self.world.global_state["Federal Reserve Balance Sheet"]
-
+                
+            self.world.global_state["US Government Defense Spending"][self.world.timestep + 1] \
+                = self.world.global_state["US Government Defense Spending"][self.world.timestep] 
+            
+            self.world.global_state["US Government Social Security Spending"][self.world.timestep + 1] \
+                = self.world.global_state["US Government Social Security Spending"][self.world.timestep] 
+            
+            self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep + 1] \
+                = self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] 
+            
+            self.world.global_state["US Government Income Security"][self.world.timestep + 1] \
+                = self.world.global_state["US Government Income Security"][self.world.timestep] 
 
             # "US Tax Wedge"
             # "US Government Defense Spending",
@@ -541,22 +552,26 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                 elif subsidy_quantitative_policy_level > 60 \
                     and subsidy_quantitative_policy_level <= 80:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 70) / 10
-                    self.world.global_state["US Government Defense Spending"] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
+                    self.world.global_state["US Government Defense Spending"][self.world.timestep + 1] \
+                        = self.world.global_state["US Government Defense Spending"][self.world.timestep] + subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
 
                 elif subsidy_quantitative_policy_level > 90 \
                     and subsidy_quantitative_policy_level <= 100:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 90) / 10
-                    self.world.global_state["US Government Social Security Spending"] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
+                    self.world.global_state["US Government Social Security Spending"][self.world.timestep + 1] \
+                        = self.world.global_state["US Government Social Security Spending"][self.world.timestep] + subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
 
                 elif subsidy_quantitative_policy_level > 100 \
                     and subsidy_quantitative_policy_level <= 120:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 110) / 10
-                    self.world.global_state["US Government Medicare Medicaid Spending"] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
+                    self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep + 1] \
+                        = self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] + subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
                 
                 elif subsidy_quantitative_policy_level > 120 \
                     and subsidy_quantitative_policy_level <= 140:
                     subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 130) / 10
-                    self.world.global_state["US Government Income Security"] += subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
+                    self.world.global_state["US Government Income Security"][self.world.timestep + 1] \
+                        = self.world.global_state["US Government Income Security"][self.world.timestep] + subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
             
 
 
