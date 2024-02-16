@@ -1,5 +1,5 @@
 import os
-path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-01"
+path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-16"
 env_config_dict = {
     # Scenario name - determines which scenario class to use
     "scenario_name": "CovidAndEconomySimulation",
@@ -39,12 +39,12 @@ env_config_dict = {
     # Real-world data comprises SIR (susceptible/infected/recovered),
     # unemployment, government policy, and vaccination numbers.
     # This setting also sets use_real_world_policies=True.
-    "use_real_world_data": False,
+    "use_real_world_data": True,
     # use_real_world_policies (bool): Run the environment with real-world policies
     # (stringency levels and subsidies). With this setting and
     # use_real_world_data=False, SIR and economy dynamics are still
     # driven by fitted models.
-    "use_real_world_policies": False,
+    "use_real_world_policies": True,
     "csv_validation": True,
 
 

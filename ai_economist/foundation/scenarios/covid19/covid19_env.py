@@ -25,7 +25,7 @@ headers = [
     "Post-productivity (trillion $)", "Current Subsidy Quantitative Policy Level",
     "Total Subsidies", "US Tax Wedge", "US Federal Deficit", "US Federal Interest Payment",
     "US Government Revenue", "US Health Index", "Defense Imperialism Spending", "Income Security Spending",
-    "Social Security Spending", "Medicare Medicaid Spending", "Federal Reserve Balance Sheet", "Inflation",
+    "Social Security Spending", "Medicare Medicaid Spending", "Federal Reserve Balance Sheet", "Inflation", "US Treasury Yield",
     "Defense Imperialism Index", "Income Security Index", "Social Security Index", "Medicare Medicaid Index",
     "Inflation Index", "US Treasury Yield Index", "Health Index", "Economic Index", "Reward", "Reward Social Welfare"
 ]
@@ -1804,6 +1804,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         "Medicare Medicaid Spending": np.sum(USMedicareMedicaidSpending),
                         "Federal Reserve Balance Sheet": self.world.global_state["Federal Reserve Balance Sheet"],
                         "Inflation": US_Inflation,
+                        "US Treasury Yield": self.world.global_state["US Treasury Yield Long Term"],
                         "Defense Imperialism Index": self.world.planner.state["Defense Imperialism Index"],
                         "Income Security Index": self.world.planner.state["Income Security Index"],
                         "Social Security Index": self.world.planner.state["Social Security Index"],

@@ -492,26 +492,26 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
             ).astype(self.np_int_dtype)
             if self.world.timestep == 0 and self.world.global_state["Federal Reserve Balance Sheet"] is not None:
                 self.world.planner.state["Federal Reserve Balance Sheet"] += self.world.global_state["Federal Reserve Balance Sheet"]
-                
-            self.world.global_state["US Government Defense Spending"][self.world.timestep + 1] \
-                = self.world.global_state["US Government Defense Spending"][self.world.timestep] 
-            
-            self.world.global_state["US Government Social Security Spending"][self.world.timestep + 1] \
-                = self.world.global_state["US Government Social Security Spending"][self.world.timestep] 
-            
-            self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep + 1] \
-                = self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] 
-            
-            self.world.global_state["US Government Income Security"][self.world.timestep + 1] \
-                = self.world.global_state["US Government Income Security"][self.world.timestep] 
-
+ 
             # "US Tax Wedge"
             # "US Government Defense Spending",
             # "US Government Social Security Spending",
             # "US Government Medicare Medicaid Spending",
             # "US Government Non Defense Others Spending",
             # Update subsidy - quantitative easing level
-            if self.world.timestep + 1 <= self._episode_length:
+            if self.world.timestep + 1 <= self._episode_length - 1:
+                self.world.global_state["US Government Defense Spending"][self.world.timestep + 1] \
+                    = self.world.global_state["US Government Defense Spending"][self.world.timestep] 
+                
+                self.world.global_state["US Government Social Security Spending"][self.world.timestep + 1] \
+                    = self.world.global_state["US Government Social Security Spending"][self.world.timestep] 
+                
+                self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep + 1] \
+                    = self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] 
+                
+                self.world.global_state["US Government Income Security"][self.world.timestep + 1] \
+                    = self.world.global_state["US Government Income Security"][self.world.timestep] 
+                
                 hundred_billions_divided_by_365 = 10**9 / 365
                 if subsidy_quantitative_policy_level <= 20:
                     subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level / 20
