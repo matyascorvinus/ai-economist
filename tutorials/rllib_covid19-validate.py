@@ -14,7 +14,7 @@ env_config_dict = {
         }},
         {"FederalGovernmentSubsidyAndQuantitativePolicies": {
             # The number of subsidy levels.
-            "num_subsidy_quantitative_policy_level": 141,
+            "num_subsidy_quantitative_policy_level": 143,
             # The number of days over which the total subsidy amount is evenly rolled out.
             "subsidy_quantitative_policy_interval": 90,
             # The maximum annual subsidy that may be allocated per person.

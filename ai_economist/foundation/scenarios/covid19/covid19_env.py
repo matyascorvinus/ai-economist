@@ -121,7 +121,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         pop_between_age_18_65=0.6,
         infection_too_sick_to_work_rate=0.1,
         risk_free_interest_rate=0.5/100,
-        fed_fund_rate_01_2020=2.16/100,
+        fed_fund_rate_01_2020=1.75,
         inflation_cpi_2019=0.017,
         economic_reward_crra_eta=2,
         health_priority_scaling_agents=1,
@@ -136,10 +136,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         us_government_non_defense_others_spending = 6.61 * 10**11 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
         us_federal_net_interest = 0.375 * 10**12 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
         us_government_debt = 16.898 * 10**12, # https://www.cbo.gov/publication/56309
-        us_treasury_yield_long_term= 0.375/16.898, # divided us_federal_net_interest by us_government_debt 
+        us_treasury_yield_long_term= 1.92 / 100, # assume that US Treasury only issues long-term treasury bonds
         us_federal_revenue= 3.5 * 10**12 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
         us_M2_money_supply= 3955.3*10**9,
-        fed_reserve_balance_sheet= 4*10**12,
+        fed_reserve_balance_sheet= 4*10**12, # assume that FED only buy long-term treasury bonds
         cbo_output_gap_2019=0.9165, # https://www.cbo.gov/data/budget-economic-data - 10-Year Economic Projections - Jul 2020
         social_security_participants= (69.1 + 5.7) * 10**6, # https://www.ssa.gov/policy/docs/chartbooks/fast_facts/2020/fast_facts20.html#pagei
         medicare_medicaid_participants=71395465, # https://www.cms.gov/newsroom/fact-sheets/medicaid-facts-and-figures#:~:text=Medicaid%20Facts%20and%20Figures%201%2071%2C395%2C465%20individuals%20were,was%2015%2C181%2C880%20for%20the%203rd%20quarter%20of%202018.%5B2%5D
@@ -160,6 +160,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         max_us_imperialism_level=5,
         max_us_imperialism_level_spending_required=1.2 * 10**12,
         csv_validation=False,
+        interest_hikes_shock_gdp=0.5, # 0.5% of GDP for every 100 basic point rate hikes
         **base_env_kwargs,
     ):
         # verify_activation_code()
@@ -374,6 +375,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.risk_free_interest_rate = self.np_float_dtype(risk_free_interest_rate)
         self.inflation_cpi_2019 = self.np_float_dtype(inflation_cpi_2019)
         self.fed_fund_rates = self.np_float_dtype(fed_fund_rate_01_2020)
+        self.interest_hikes_shock_gdp = self.np_float_dtype(interest_hikes_shock_gdp)
         self.us_treasury_yield_long_term = self.np_float_dtype(us_treasury_yield_long_term)
         self.us_government_debt = self.np_float_dtype(us_government_debt)
         self.fed_reserve_balance_sheet = self.np_float_dtype(fed_reserve_balance_sheet)
@@ -1173,7 +1175,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             federal_interest_payment = self.world.global_state["US Debt"] * self.world.global_state["US Treasury Yield Long Term"] / 365
             if len(self.world.planner.state["Federal Reserve Balance Sheet"]) > 1 and self.world.planner.state["Federal Reserve Balance Sheet"][-1] != 0:
                 quantitative_amount = self.world.planner.state["Federal Reserve Balance Sheet"][-1]
-                federal_interest_payment = ((self.world.global_state["US Debt"] - quantitative_amount) * self.world.global_state["US Treasury Yield Long Term"] + quantitative_amount * self.world.global_state["Federal Reserve Fund Rate"]) / 365
+                federal_interest_payment = ((self.world.global_state["US Debt"] - quantitative_amount) * self.world.global_state["US Treasury Yield Long Term"] + quantitative_amount * self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] / 100) / 365
             
             self.world.global_state["US Federal Interest Payment"] = federal_interest_payment
             self.world.global_state["US Federal Deficit"] = self.world.global_state["US Government Defense Spending"][self.world.timestep] \
@@ -1239,6 +1241,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     self.world.global_state["US Federal Interest Payment"] > 0 else 0
                 fiscal_shock = shock_determinator * (np.abs(total_deficit) - np.abs(total_federal_interest_payment)) / self.world.global_state["US GDP"]
                 monetary_shock = (self.world.global_state["Federal Reserve Balance Sheet"] - self.fed_reserve_balance_sheet) / self.world.global_state["US GDP"]
+                if(self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] != self.fed_fund_rates):
+                    monetary_shock = (self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] - self.fed_fund_rates) / 1 * (self.interest_hikes_shock_gdp / 100)
                 H = 10 # horizon of simulation is the episode length - 10 years
 
                 shock = [monetary_shock, fiscal_shock] # fiscal shock. 0.01 is 1% of GDP.
@@ -1289,7 +1293,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 #             (len(self.dictionary_fiscal_theory) - index)
                 #         xt_previous_years += element['xt'][self.yearCount- index] * autoregressive_coefficient ** \
                 #             (len(self.dictionary_fiscal_theory) - index)
-                self.world.global_state["Federal Reserve Fund Rate"] = self.world.global_state["Federal Reserve Fund Rate"] + (it[1])
+                
                 self.world.global_state["US Treasury Yield Long Term"] = self.world.global_state["US Treasury Yield Long Term"] + (yldt[1])
 
                 self.world.global_state["Inflation"] = self.world.global_state["Inflation"] + (pit[1])
@@ -1652,7 +1656,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
         cost_of_subsidy_t = 0
         if (self.world.timestep > 0):
-            cost_of_subsidy_t = (1 + self.world.global_state["Federal Reserve Fund Rate"]) *\
+            cost_of_subsidy_t = (1 + self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]) *\
                                 np.sum(quantitative_t) + (np.sum(subsidy_t) - np.sum(quantitative_t)) * \
                                 (1 + self.world.global_state["US Treasury Yield Long Term"]) - \
                                 (np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep])
@@ -1881,7 +1885,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.set_global_state("Output Gap", dtype=self.np_float_dtype , value=self.cbo_output_gap_2019, planner=True)
         self.set_global_state("US Debt", dtype=self.np_float_dtype , value=self.us_government_debt, planner=True)
         self.set_global_state("Federal Reserve Balance Sheet", value=self.fed_reserve_balance_sheet, planner=True)
-        self.set_global_state("Federal Reserve Fund Rate", value=self.fed_fund_rates, planner=True)
+        self.set_global_state("Federal Reserve Fund Rate", value=self.fed_fund_rates, planner=True, isArray=True)
         self.set_global_state("Inflation", value=self.inflation_cpi_2019, planner=True)
         self.set_global_state("US Tax Wedge", value=self.us_tax_wedge, dtype=self.np_float_dtype, planner=True)
         self.set_global_state("US GDP", value=self.us_gdp_2019, planner=True)

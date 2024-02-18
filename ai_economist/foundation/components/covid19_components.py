@@ -311,7 +311,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
         self,
         *base_component_args,
         subsidy_quantitative_policy_interval=30, #90,
-        num_subsidy_quantitative_policy_level=140,
+        num_subsidy_quantitative_policy_level=143,
         max_annual_monetary_unit_per_person=20000,
         **base_component_kwargs,
     ):
@@ -499,6 +499,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
             # "US Government Medicare Medicaid Spending",
             # "US Government Non Defense Others Spending",
             # Update subsidy - quantitative easing level
+            interest_hikes = 0.25
             if self.world.timestep + 1 <= self._episode_length - 1:
                 self.world.global_state["US Government Defense Spending"][self.world.timestep + 1] \
                     = self.world.global_state["US Government Defense Spending"][self.world.timestep] 
@@ -513,7 +514,11 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     = self.world.global_state["US Government Income Security"][self.world.timestep] 
                 
                 hundred_billions_divided_by_365 = 10**9 / 365
-                if subsidy_quantitative_policy_level <= 20:
+                if subsidy_quantitative_policy_level == 0 or subsidy_quantitative_policy_level == 1:
+                    sign = 1 if subsidy_quantitative_policy_level == 1 else -1
+                    self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep + 1] = \
+                        self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] + sign * interest_hikes
+                elif subsidy_quantitative_policy_level > 1 and subsidy_quantitative_policy_level <= 20:
                     subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level / 20
                     daily_statewise_subsidy = (
                         subsidy_quantitative_policy_level_frac * self.max_daily_subsidy_per_state
