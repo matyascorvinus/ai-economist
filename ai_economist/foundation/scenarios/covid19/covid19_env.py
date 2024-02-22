@@ -21,11 +21,11 @@ from scipy.optimize import fsolve
 
 csv_file_path = 'simulation_results.csv'
 headers = [
-    "Month", "Susceptibles", "Infected", "Recovered", "Vaccinated (% of population)", "Deaths (thousands)" ,"Mean Unemployment Rate (%)","US Debt", "US GDP", 
+    "Month", "Susceptibles", "Infected", "Recovered", "Vaccinated (% of population)", "Deaths (thousands)" ,"Mean Unemployment Rate (%)","US Debt (USD)", "US GDP (USD)", 
     "Post-productivity (trillion $)", "Current Subsidy Quantitative Policy Level",
-    "Total Subsidies", "US Tax Wedge", "US Federal Deficit", "US Federal Interest Payment",
-    "US Government Revenue", "US Health Index", "Defense Imperialism Spending", "Income Security Spending",
-    "Social Security Spending", "Medicare Medicaid Spending", "Federal Reserve Balance Sheet", "Inflation", "US Treasury Yield",
+    "Total Subsidies (USD)", "US Tax Wedge ('%' of GDP)", "US Federal Deficit (USD)", "US Federal Interest Payment (USD)", "Federal Reserve Fund Rate (%)", "US Treasury Yield Long Term (%)",
+    "US Government Revenue (USD)", "US Health Index", "Defense Imperialism Spending (USD)", "Income Security Spending (USD)",
+    "Social Security Spending (USD)", "Medicare Medicaid Spending (USD)", "Federal Reserve Balance Sheet (USD)", "Inflation", "US Treasury Yield",
     "Defense Imperialism Index", "Income Security Index", "Social Security Index", "Medicare Medicaid Index",
     "Inflation Index", "US Treasury Yield Index", "Health Index", "Economic Index", "Reward", "Reward Social Welfare"
 ]
@@ -139,7 +139,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         us_treasury_yield_long_term= 1.92 / 100, # assume that US Treasury only issues long-term treasury bonds
         us_federal_revenue= 3.5 * 10**12 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
         us_M2_money_supply= 3955.3*10**9,
-        fed_reserve_balance_sheet= 4*10**12, # assume that FED only buy long-term treasury bonds
+        fed_reserve_balance_sheet= 4.173626 * 10**12, # assume that FED only buy long-term treasury bonds
         cbo_output_gap_2019=0.9165, # https://www.cbo.gov/data/budget-economic-data - 10-Year Economic Projections - Jul 2020
         social_security_participants= (69.1 + 5.7) * 10**6, # https://www.ssa.gov/policy/docs/chartbooks/fast_facts/2020/fast_facts20.html#pagei
         medicare_medicaid_participants=71395465, # https://www.cms.gov/newsroom/fact-sheets/medicaid-facts-and-figures#:~:text=Medicaid%20Facts%20and%20Figures%201%2071%2C395%2C465%20individuals%20were,was%2015%2C181%2C880%20for%20the%203rd%20quarter%20of%202018.%5B2%5D
@@ -161,6 +161,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         max_us_imperialism_level_spending_required=1.2 * 10**12,
         csv_validation=False,
         interest_hikes_shock_gdp=0.5, # 0.5% of GDP for every 100 basic point rate hikes
+        state_governments_policies_only=False, # let the real-world state government handle the covid-19 restriction, and the federal government still operated by AI
         **base_env_kwargs,
     ):
         # verify_activation_code()
@@ -314,8 +315,32 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             ]
             self.world.real_world_quantitative = self._real_world_data["quantitative"][
                 self.start_date_index :
+            ] 
+
+            self.world.real_world_inflation = self._real_world_data["inflation"][
+                self.start_date_index :
             ]
 
+            self.world.real_world_fed_fund_rate = self._real_world_data["fed_fund_rate"][
+                self.start_date_index :
+            ]
+
+            self.world.real_world_us_treasury_yield_long_10_years = self._real_world_data["us_treasury_yield_long_10_years"][
+                self.start_date_index :
+            ]
+
+            self.world.real_world_revenue = self._real_world_data["revenue"][
+                self.start_date_index :
+            ]
+
+            self.world.real_world_spending = self._real_world_data["spending"][
+                self.start_date_index :
+            ]
+
+
+            self.world.real_world_debt = self._real_world_data["debt"][
+                self.start_date_index :
+            ]
 
         # Policy --> Unemployment
         #   For accurately modeling the state-wise unemployment, we convolve
@@ -1130,198 +1155,210 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 infection_too_sick_to_work_rate=self.infection_too_sick_to_work_rate,
                 population_between_age_18_65=self.pop_between_age_18_65,
             )
-
+            if self.use_real_world_data:
+                self.world.global_state["US Government Revenue"][self.world.timestep] = self._real_world_data["revenue"][self.world.timestep]
+                daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
+                postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"]) + \
+                                            daily_statewise_subsidy_t * \
+                                                self.us_government_spending_economic_multiplier
+                self.world.global_state["Postsubsidy Productivity"][
+                    curr_t
+                ] = postsubsidy_productivity_t 
+                self.world.global_state["US Government Revenue"][self.world.timestep] = self._real_world_data["us_treasury_yield_long_10_years"][self.world.timestep]
+                self.world.global_state["US Debt"] = self._real_world_data["debt"][self.world.timestep]
+                self.world.global_state["Inflation"] = self._real_world_data["inflation"][self.world.timestep]
             # Current GDP after calculating the death rate 
             # Federal tax revenue 
-
-            # Considered the tax revenue is attached with the productivity
-            self.world.global_state["US Government Revenue"][self.world.timestep] = self.world.global_state["US GDP"] * self.world.global_state["US Tax Wedge"] / 365
-            federal_tax_revenue = self.world.global_state["US Government Revenue"][self.world.timestep]
-            # Subsidies
-            # ---------
-            # Add federal government subsidy to productivity
-            daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
-             
-            # print(self.world.global_state["US Tax Wedge"])
-            # Subsidies via cutting Taxation
-            # if(curr_t > 1 and self.world.planner.state["Current Subsidy Quantitative Policy Level"] >= 40 and \
-            #     self.world.planner.state["Current Subsidy Quantitative Policy Level"] <= 50):
-            #     daily_statewise_subsidy_t += (self.world.global_state["US Tax Wedge"] - \
-            #         self.world.global_state["US Tax Wedge"]) * self.world.global_state["US GDP"] / 365
-            postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"]) + \
-                                         daily_statewise_subsidy_t * \
-                                            self.us_government_spending_economic_multiplier
-            self.world.global_state["Postsubsidy Productivity"][
-                curr_t
-            ] = postsubsidy_productivity_t 
- 
+            else:
+                # Considered the tax revenue is attached with the productivity
+                self.world.global_state["US Government Revenue"][self.world.timestep] = self.world.global_state["US GDP"] * self.world.global_state["US Tax Wedge"] / 365
+                federal_tax_revenue = self.world.global_state["US Government Revenue"][self.world.timestep]
+                # Subsidies
+                # ---------
+                # Add federal government subsidy to productivity
+                daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
                 
-            # Federal Reserve Fund Rate
+                # print(self.world.global_state["US Tax Wedge"])
+                # Subsidies via cutting Taxation
+                # if(curr_t > 1 and self.world.planner.state["Current Subsidy Quantitative Policy Level"] >= 40 and \
+                #     self.world.planner.state["Current Subsidy Quantitative Policy Level"] <= 50):
+                #     daily_statewise_subsidy_t += (self.world.global_state["US Tax Wedge"] - \
+                #         self.world.global_state["US Tax Wedge"]) * self.world.global_state["US GDP"] / 365
+                postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"]) + \
+                                            daily_statewise_subsidy_t * \
+                                                self.us_government_spending_economic_multiplier
+                self.world.global_state["Postsubsidy Productivity"][
+                    curr_t
+                ] = postsubsidy_productivity_t 
+    
+                    
+                # Federal Reserve Fund Rate
 
-            # TODO: Add indicator for default risk via Debt, Debt to GDP, Interest Rate, Deficit, Reserve Balance
-            # https://johnhcochrane.blogspot.com/2020/07/the-surplus-process.html
-            # \frac{B_{t-1}}{P_{t}}=b_{t}=E_{t}\sum_{j=0}^{\infty}\beta^{j}s_{t+j}.
-            #             b_t = B_t_minus_1 / P_t
-            #             discount_factor = 0.95  # assume beta = 0.95
-            #             expected_sum = 0.0
-            #
-            #             for j in range(0, infinity):
-            #               expected_sum += discount_factor ** j     * s_t_plus_j
-            #
-            #            b_t = expected_sum * b_t
-            # b_t is the expected discounted sum of future surpluses
-            #  TODO: Calculate the primary surplus - which is s_t_plus_j - current primary surplus and
-            #   the sum of the past primary surpluses and the discount_factor equals 1 / fed_fund_rate
-            federal_interest_payment = self.world.global_state["US Debt"] * self.world.global_state["US Treasury Yield Long Term"] / 365
-            if len(self.world.planner.state["Federal Reserve Balance Sheet"]) > 1 and self.world.planner.state["Federal Reserve Balance Sheet"][-1] != 0:
-                quantitative_amount = self.world.planner.state["Federal Reserve Balance Sheet"][-1]
-                federal_interest_payment = ((self.world.global_state["US Debt"] - quantitative_amount) * self.world.global_state["US Treasury Yield Long Term"] + quantitative_amount * self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] / 100) / 365
-            
-            self.world.global_state["US Federal Interest Payment"] = federal_interest_payment
-            self.world.global_state["US Federal Deficit"] = self.world.global_state["US Government Defense Spending"][self.world.timestep] \
-                                                            + self.world.global_state["US Government Social Security Spending"][self.world.timestep] \
-                                                            + self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] \
-                                                            + self.world.global_state["US Government Income Security"][self.world.timestep] \
-                                                            + np.sum(daily_statewise_subsidy_t) + federal_interest_payment - federal_tax_revenue
-            if self.world.timestep + 1 <= self.episode_length:
-                self.world.global_state["US Debt"] += self.world.global_state["US Federal Deficit"]
-                if self.world.global_state["US Debt"] <= 0:
-                    self.world.global_state["US Debt"] = 0
- 
-            # TODO: Later implement Federal Reserve
-            # if self.world.global_state["Inflation"] * 100 > 0.03:
-            #     self.world.global_state["Federal Reserve Fund Rate"][
-            #         self.world.timestep
-            #     ] = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep - 1] + 0.05 / 100
-
-            # [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(rho = rho, rhoi = rhoi, rhos = rhos)
-            # [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] = \
-            #     self.f_doir_final(self.episode_length, Nb, nb, N, Q, ze, Lb, 0 * t_ipi, 0 * t_ix, 0 * t_spi,  
-            #                       0 * t_sx, alph, omeg, b_s, b_i, shock, rho)
-            # it = a + ρit−1 + bxt + cπt + uit
-            # st = a + ρst−1 + bxt + cπt + ust 
-            # c = 0.22
-            OUTPUT_GAP_CBO_2020_2030 = [-6.544903164, -4.243083199, -3.110728734, -2.791215879, -2.390089734, -1.917691323, -1.378409155, -0.843000579, -0.49877297, -0.450204275, -0.443190716]
-            REAL_POTENTIAL_GDP_2019_2030 = [
-                21052, 21667,	22103,	22810,	23654,	24568,	25535,	26531,	27556,	28618,	29726,	30870,
-            ] 
-            lengthYearCount = len(REAL_POTENTIAL_GDP_2019_2030)
-            if self.world.timestep % 365 == 0 and self.world.timestep > 0 and self.world.timestep + 1 <= self.episode_length and self.yearCount <= lengthYearCount - 1: 
+                # Add indicator for default risk via Debt, Debt to GDP, Interest Rate, Deficit, Reserve Balance
+                # https://johnhcochrane.blogspot.com/2020/07/the-surplus-process.html
+                # \frac{B_{t-1}}{P_{t}}=b_{t}=E_{t}\sum_{j=0}^{\infty}\beta^{j}s_{t+j}.
+                #             b_t = B_t_minus_1 / P_t
+                #             discount_factor = 0.95  # assume beta = 0.95
+                #             expected_sum = 0.0
+                #
+                #             for j in range(0, infinity):
+                #               expected_sum += discount_factor ** j     * s_t_plus_j
+                #
+                #            b_t = expected_sum * b_t
+                # b_t is the expected discounted sum of future surpluses
+                # Calculate the primary surplus - which is s_t_plus_j - current primary surplus and
+                # the sum of the past primary surpluses and the discount_factor equals 1 / fed_fund_rate
+                federal_interest_payment = self.world.global_state["US Debt"] * self.world.global_state["US Treasury Yield Long Term"] / 365
+                if len(self.world.planner.state["Federal Reserve Balance Sheet"]) > 1 and self.world.planner.state["Federal Reserve Balance Sheet"][-1] != 0:
+                    quantitative_amount = self.world.planner.state["Federal Reserve Balance Sheet"][-1]
+                    federal_interest_payment = ((self.world.global_state["US Debt"] - quantitative_amount) * self.world.global_state["US Treasury Yield Long Term"] + quantitative_amount * self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] / 100) / 365
                 
-                self.world.global_state["US Government Social Security Beneficiaries"] = \
-                    self.world.global_state["US Government Social Security Beneficiaries"] + self.social_security_beneficiaries_growth
-                self.world.global_state["US Medicare Medicaid Beneficiaries"] = \
-                    self.world.global_state["US Medicare Medicaid Beneficiaries"] + self.medicare_medicaid_beneficiaries_growth
-                self.world.global_state["US Income Security Beneficiaries"] = \
-                    self.world.global_state["US Income Security Beneficiaries"] + self.world.planner.state["Total Unemployed"]
+                self.world.global_state["US Federal Interest Payment"] = federal_interest_payment
+                self.world.global_state["US Federal Deficit"] = self.world.global_state["US Government Defense Spending"][self.world.timestep] \
+                                                                + self.world.global_state["US Government Social Security Spending"][self.world.timestep] \
+                                                                + self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] \
+                                                                + self.world.global_state["US Government Income Security"][self.world.timestep] \
+                                                                + np.sum(daily_statewise_subsidy_t) + federal_interest_payment - federal_tax_revenue
+                if self.world.timestep + 1 <= self.episode_length:
+                    self.world.global_state["US Debt"] += self.world.global_state["US Federal Deficit"]
+                    if self.world.global_state["US Debt"] <= 0:
+                        self.world.global_state["US Debt"] = 0
+    
+                # TODO: Later implement Federal Reserve
+                # if self.world.global_state["Inflation"] * 100 > 0.03:
+                #     self.world.global_state["Federal Reserve Fund Rate"][
+                #         self.world.timestep
+                #     ] = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep - 1] + 0.05 / 100
 
-                current_real_potential_gdp = REAL_POTENTIAL_GDP_2019_2030[self.yearCount] * 10**9
-                bet = 0.99 # 
-                omeg = 0.9 # 0.7 in draft, but larger illustrates long term debt effects better. maturity coeff
-                alph = 0.2 # 
-                sig = 0.5 #
-                kap = 0.5 #
-                # kap = 100000 # to produce flex price row of table. Over writes graphs!
-                rhoi = 0.7 #
-                rhos = 0.5 
-                # rho = 0.39 #rho = 1  works too
-                rho = 0.99
-                t_ix = 0.5 # these are set to zero below in the case of no rules 
-                t_ipi = 0.8
-                t_sx = 1
-                t_spi = 0.25
-                b_i = 0
-                b_s= 0 # initialize so functions have an argument. Should not be used before defined. 
-                # horizon of simulation is the episode length 
+                # [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(rho = rho, rhoi = rhoi, rhos = rhos)
+                # [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] = \
+                #     self.f_doir_final(self.episode_length, Nb, nb, N, Q, ze, Lb, 0 * t_ipi, 0 * t_ix, 0 * t_spi,  
+                #                       0 * t_sx, alph, omeg, b_s, b_i, shock, rho)
+                # it = a + ρit−1 + bxt + cπt + uit
+                # st = a + ρst−1 + bxt + cπt + ust 
+                # c = 0.22
+                OUTPUT_GAP_CBO_2020_2030 = [-6.544903164, -4.243083199, -3.110728734, -2.791215879, -2.390089734, -1.917691323, -1.378409155, -0.843000579, -0.49877297, -0.450204275, -0.443190716]
+                REAL_POTENTIAL_GDP_2019_2030 = [
+                    21052, 21667,	22103,	22810,	23654,	24568,	25535,	26531,	27556,	28618,	29726,	30870,
+                ] 
+                lengthYearCount = len(REAL_POTENTIAL_GDP_2019_2030)
+                if self.world.timestep % 365 == 0 and self.world.timestep > 0 and self.world.timestep + 1 <= self.episode_length and self.yearCount <= lengthYearCount - 1: 
+                    
+                    self.world.global_state["US Government Social Security Beneficiaries"] = \
+                        self.world.global_state["US Government Social Security Beneficiaries"] + self.social_security_beneficiaries_growth
+                    self.world.global_state["US Medicare Medicaid Beneficiaries"] = \
+                        self.world.global_state["US Medicare Medicaid Beneficiaries"] + self.medicare_medicaid_beneficiaries_growth
+                    self.world.global_state["US Income Security Beneficiaries"] = \
+                        self.world.global_state["US Income Security Beneficiaries"] + self.world.planner.state["Total Unemployed"]
 
-                fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
-                total_deficit = self.world.global_state["US Debt"] - self.us_government_debt
-                shock_determinator = -1 if total_deficit > 0 else 1
-                total_federal_interest_payment = self.world.global_state["US Federal Interest Payment"] if \
-                    self.world.global_state["US Federal Interest Payment"] > 0 else 0
-                fiscal_shock = shock_determinator * (np.abs(total_deficit) - np.abs(total_federal_interest_payment)) / self.world.global_state["US GDP"]
-                monetary_shock = (self.world.global_state["Federal Reserve Balance Sheet"] - self.fed_reserve_balance_sheet) / self.world.global_state["US GDP"]
-                if(self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] != self.fed_fund_rates):
-                    monetary_shock = (self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] - self.fed_fund_rates) / 1 * (self.interest_hikes_shock_gdp / 100)
-                H = 10 # horizon of simulation is the episode length - 10 years
-
-                shock = [monetary_shock, fiscal_shock] # fiscal shock. 0.01 is 1% of GDP.
-                print('monetary_shock', monetary_shock)
-                print('fiscal_shock', fiscal_shock)
-                fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
-
-                b_s_guess = np.array([0, 1])
-                f = lambda b_s: self.parameterfun_s(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, 
-                                            b_i, b_s, H, t_spi, t_sx, alph, [0, shock[1]], fraction_inflated)
-                f_i = lambda b_i: self.parameterfun(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, 0, H, t_spi, t_sx, alph, 
-                                            [shock[0], 0],)
-                b_s, info, ier, msg = fsolve(f, b_s_guess, full_output=True)
-                b_s = np.mean(b_s) 
-                if np.abs(fiscal_shock) == 0:
-                    b_s = 0
-                
-                b_i, info, ier, msg = fsolve(f_i, b_s_guess, full_output=True)
-                b_i = np.mean(b_i)
-                if np.abs(monetary_shock) == 0:
+                    current_real_potential_gdp = REAL_POTENTIAL_GDP_2019_2030[self.yearCount] * 10**9
+                    bet = 0.99 # 
+                    omeg = 0.9 # 0.7 in draft, but larger illustrates long term debt effects better. maturity coeff
+                    alph = 0.2 # 
+                    sig = 0.5 #
+                    kap = 0.5 #
+                    # kap = 100000 # to produce flex price row of table. Over writes graphs!
+                    rhoi = 0.7 #
+                    rhos = 0.5 
+                    # rho = 0.39 #rho = 1  works too
+                    rho = 0.99
+                    t_ix = 0.5 # these are set to zero below in the case of no rules 
+                    t_ipi = 0.8
+                    t_sx = 1
+                    t_spi = 0.25
                     b_i = 0
-                # b_s = 0.1368
-                [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(sig,kap,bet,omeg,rho,t_ix,t_ipi,rhoi,rhos,b_i,b_s)
-                # print('N\n', N, '\nNb\n', Nb,'\nnb\n', nb, '\nQ\n', Q, '\nze\n', ze, '\nLb\n', Lb) 
-                [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] =\
-                self.f_doir_final(H , Nb, nb, N, Q, ze, Lb, t_ipi , t_ix , t_spi, t_sx, alph ,omeg , b_s , b_i , shock, rho); 
-                # Create a dictionary, storing these key value pairs
-                dictionary = {'zt': zt, 'yt': yt, 'xt': xt, 'pit': pit, 'vt': vt, 
-                              'qt': qt, 'uit': uit, 'ust': ust, 'it': it, 'st': st, 'qlevelt': qlevelt, 
-                              'yldt': yldt, 'rnt': rnt, 'sumomeg': sumomeg, 
-                              'sumratio': sumratio}
-                self.dictionary_fiscal_theory.append(dictionary)
-                print("Inflation shock: ", pit[1])
-                print("Yield: ", yldt[1])
-                print("Federal Reserve Fund Rate: ", it[1])
-                # it_previous_years = 0
-                # yldt_previous_years = 0
-                # pit_previous_years = 0
-                # xt_previous_years = 0
-                # autoregressive_coefficient = 0.7
-                # if len(self.dictionary_fiscal_theory) > 1:
-                #     for index, element in enumerate(self.dictionary_fiscal_theory):
-                #         it_previous_years += element['it'][self.yearCount - index] * autoregressive_coefficient ** \
-                #             (len(self.dictionary_fiscal_theory) - index)
-                #         yldt_previous_years += element['yldt'][self.yearCount- index] * autoregressive_coefficient ** \
-                #             (len(self.dictionary_fiscal_theory) - index)
-                #         pit_previous_years += element['pit'][self.yearCount- index] * autoregressive_coefficient ** \
-                #             (len(self.dictionary_fiscal_theory) - index)
-                #         xt_previous_years += element['xt'][self.yearCount- index] * autoregressive_coefficient ** \
-                #             (len(self.dictionary_fiscal_theory) - index)
+                    b_s= 0 # initialize so functions have an argument. Should not be used before defined. 
+                    # horizon of simulation is the episode length 
+
+                    fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
+                    total_deficit = self.world.global_state["US Debt"] - self.us_government_debt
+                    shock_determinator = -1 if total_deficit > 0 else 1
+                    total_federal_interest_payment = self.world.global_state["US Federal Interest Payment"] if \
+                        self.world.global_state["US Federal Interest Payment"] > 0 else 0
+                    fiscal_shock = shock_determinator * (np.abs(total_deficit) - np.abs(total_federal_interest_payment)) / self.world.global_state["US GDP"]
+                    monetary_shock = (self.world.global_state["Federal Reserve Balance Sheet"] - self.fed_reserve_balance_sheet) / self.world.global_state["US GDP"]
+                    if(self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] != self.fed_fund_rates):
+                        monetary_shock = (self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] - self.fed_fund_rates) / 1 * (self.interest_hikes_shock_gdp / 100)
+                    H = 10 # horizon of simulation is the episode length - 10 years
+
+                    shock = [monetary_shock, fiscal_shock] # fiscal shock. 0.01 is 1% of GDP.
+                    print('monetary_shock', monetary_shock)
+                    print('fiscal_shock', fiscal_shock)
+                    fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
+
+                    b_s_guess = np.array([0, 1])
+                    f = lambda b_s: self.parameterfun_s(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, 
+                                                b_i, b_s, H, t_spi, t_sx, alph, [0, shock[1]], fraction_inflated)
+                    f_i = lambda b_i: self.parameterfun(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, 0, H, t_spi, t_sx, alph, 
+                                                [shock[0], 0],)
+                    b_s, info, ier, msg = fsolve(f, b_s_guess, full_output=True)
+                    b_s = np.mean(b_s) 
+                    if np.abs(fiscal_shock) == 0:
+                        b_s = 0
+                    
+                    b_i, info, ier, msg = fsolve(f_i, b_s_guess, full_output=True)
+                    b_i = np.mean(b_i)
+                    if np.abs(monetary_shock) == 0:
+                        b_i = 0
+                    # b_s = 0.1368
+                    [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(sig,kap,bet,omeg,rho,t_ix,t_ipi,rhoi,rhos,b_i,b_s)
+                    # print('N\n', N, '\nNb\n', Nb,'\nnb\n', nb, '\nQ\n', Q, '\nze\n', ze, '\nLb\n', Lb) 
+                    [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] =\
+                    self.f_doir_final(H , Nb, nb, N, Q, ze, Lb, t_ipi , t_ix , t_spi, t_sx, alph ,omeg , b_s , b_i , shock, rho); 
+                    # Create a dictionary, storing these key value pairs
+                    dictionary = {'zt': zt, 'yt': yt, 'xt': xt, 'pit': pit, 'vt': vt, 
+                                'qt': qt, 'uit': uit, 'ust': ust, 'it': it, 'st': st, 'qlevelt': qlevelt, 
+                                'yldt': yldt, 'rnt': rnt, 'sumomeg': sumomeg, 
+                                'sumratio': sumratio}
+                    self.dictionary_fiscal_theory.append(dictionary)
+                    print("Inflation shock: ", pit[1])
+                    print("Yield: ", yldt[1])
+                    print("Federal Reserve Fund Rate: ", it[1])
+                    # it_previous_years = 0
+                    # yldt_previous_years = 0
+                    # pit_previous_years = 0
+                    # xt_previous_years = 0
+                    # autoregressive_coefficient = 0.7
+                    # if len(self.dictionary_fiscal_theory) > 1:
+                    #     for index, element in enumerate(self.dictionary_fiscal_theory):
+                    #         it_previous_years += element['it'][self.yearCount - index] * autoregressive_coefficient ** \
+                    #             (len(self.dictionary_fiscal_theory) - index)
+                    #         yldt_previous_years += element['yldt'][self.yearCount- index] * autoregressive_coefficient ** \
+                    #             (len(self.dictionary_fiscal_theory) - index)
+                    #         pit_previous_years += element['pit'][self.yearCount- index] * autoregressive_coefficient ** \
+                    #             (len(self.dictionary_fiscal_theory) - index)
+                    #         xt_previous_years += element['xt'][self.yearCount- index] * autoregressive_coefficient ** \
+                    #             (len(self.dictionary_fiscal_theory) - index)
+                    
+                    self.world.global_state["US Treasury Yield Long Term"] = self.world.global_state["US Treasury Yield Long Term"] + (yldt[1])
+
+                    self.world.global_state["Inflation"] = self.world.global_state["Inflation"] + (pit[1])
+
+                    self.world.global_state["Output Gap"] = self.world.global_state["Output Gap"] + (xt[1])
+                    
+                    # GDP_growth = self.world.global_state["Postsubsidy Productivity"][
+                    #     curr_t
+                    # ] / self.world.global_state["Postsubsidy Productivity"][
+                    #     0
+                    # ]
+                    # self.world.global_state["US GDP"][
+                    #     curr_t + 1
+                    # ] = self.world.global_state["US GDP"][
+                    #     curr_t
+                    # ] * (np.average(GDP_growth))
+
+                    # Assume productivity after subsidy will be the indicator for GDP
+                    self.world.global_state["US GDP"] = np.sum(self.world.global_state["Postsubsidy Productivity"][1:], axis=(0, 1)) 
+                    self.yearCount += 1
+
+
+                # A 2019 study by Congressional Budget Office (CBO) economists Edward Gamber and
+                # John Seliski found that every 10 percent increase in the debt-to-GDP ratio translates into
+                # a 0.2 to 0.3 percentage point increase in interest rates
+                # -- https://www.crfb.org/papers/risks-and-threats-deficits-and-debt
+                # If inflation larger than 3%, then the Federal Reserve will increase the interest rate
+
                 
-                self.world.global_state["US Treasury Yield Long Term"] = self.world.global_state["US Treasury Yield Long Term"] + (yldt[1])
-
-                self.world.global_state["Inflation"] = self.world.global_state["Inflation"] + (pit[1])
-
-                self.world.global_state["Output Gap"] = self.world.global_state["Output Gap"] + (xt[1])
-                
-                # GDP_growth = self.world.global_state["Postsubsidy Productivity"][
-                #     curr_t
-                # ] / self.world.global_state["Postsubsidy Productivity"][
-                #     0
-                # ]
-                # self.world.global_state["US GDP"][
-                #     curr_t + 1
-                # ] = self.world.global_state["US GDP"][
-                #     curr_t
-                # ] * (np.average(GDP_growth))
-
-                self.world.global_state["US GDP"] = current_real_potential_gdp 
-                self.yearCount += 1
-
-
-            # A 2019 study by Congressional Budget Office (CBO) economists Edward Gamber and
-            # John Seliski found that every 10 percent increase in the debt-to-GDP ratio translates into
-            # a 0.2 to 0.3 percentage point increase in interest rates
-            # -- https://www.crfb.org/papers/risks-and-threats-deficits-and-debt
-            # If inflation larger than 3%, then the Federal Reserve will increase the interest rate
-
-            
 
             # Update agent state
             # ------------------
@@ -1672,22 +1709,24 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         us_treasury_yield_long_term_score = 0
         other_planner_rewards = 0
         if self.world.timestep % 365 == 0 and self.world.timestep > 0:
-            inflation_score = -US_Inflation / self.ideal_inflation
-            us_treasury_yield_long_term_score = -(self.world.global_state["US Treasury Yield Long Term"] / self.us_treasury_yield_long_term)
-            us_imperialism_level_score = np.sum(USDefenseSpending) / self.max_us_imperialism_level_spending_required * \
-                self.max_us_imperialism_level
-            if us_imperialism_level_score > self.max_us_imperialism_level: 
-                us_imperialism_level_score = self.max_us_imperialism_level
-            income_security_poverty_reduction = np.sum(USIncomeSecurity) / self.world.global_state["US Income Security Beneficiaries"]
-            income_security_poverty_reduction_score = income_security_poverty_reduction/(self.income_security_benefits_avg * (1 + US_Inflation))
-            medicare_medicaid_poverty_reduction = np.sum(USMedicareMedicaidSpending) / self.world.global_state["US Medicare Medicaid Beneficiaries"]
-            medicare_medicaid_poverty_reduction_score = medicare_medicaid_poverty_reduction/(self.medicare_medicaid_benefits_avg * (1 + US_Inflation))
-            social_security_poverty_reduction = np.sum(USSocialSecuritySpending) / self.world.global_state["US Government Social Security Beneficiaries"]
-            social_security_poverty_reduction_score = social_security_poverty_reduction/(self.social_security_benefits_avg * (1 + US_Inflation))
-            self.world.planner.state["Defense Imperialism Index"] += us_imperialism_level_score
-            self.world.planner.state["Income Security Index"] += income_security_poverty_reduction_score
-            self.world.planner.state["Social Security Index"] += social_security_poverty_reduction_score
-            self.world.planner.state["Medicare Medicaid Index"] += medicare_medicaid_poverty_reduction_score
+            inflation_score = -US_Inflation / self.ideal_inflation * 12
+            us_treasury_yield_long_term_score = -(self.world.global_state["US Treasury Yield Long Term"] \
+                - self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep])  * 12
+            if not self.use_real_world_data:
+                us_imperialism_level_score = np.sum(USDefenseSpending) / self.max_us_imperialism_level_spending_required * \
+                    self.max_us_imperialism_level
+                if us_imperialism_level_score > self.max_us_imperialism_level: 
+                    us_imperialism_level_score = self.max_us_imperialism_level
+                income_security_poverty_reduction = np.sum(USIncomeSecurity) / self.world.global_state["US Income Security Beneficiaries"]
+                income_security_poverty_reduction_score = income_security_poverty_reduction/(self.income_security_benefits_avg * (1 + US_Inflation))
+                medicare_medicaid_poverty_reduction = np.sum(USMedicareMedicaidSpending) / self.world.global_state["US Medicare Medicaid Beneficiaries"]
+                medicare_medicaid_poverty_reduction_score = medicare_medicaid_poverty_reduction/(self.medicare_medicaid_benefits_avg * (1 + US_Inflation))
+                social_security_poverty_reduction = np.sum(USSocialSecuritySpending) / self.world.global_state["US Government Social Security Beneficiaries"]
+                social_security_poverty_reduction_score = social_security_poverty_reduction/(self.social_security_benefits_avg * (1 + US_Inflation))
+                self.world.planner.state["Defense Imperialism Index"] += us_imperialism_level_score
+                self.world.planner.state["Income Security Index"] += income_security_poverty_reduction_score
+                self.world.planner.state["Social Security Index"] += social_security_poverty_reduction_score
+                self.world.planner.state["Medicare Medicaid Index"] += medicare_medicaid_poverty_reduction_score
             self.world.planner.state["Inflation Index"] += inflation_score
             self.world.planner.state["US Treasury Yield Index"] += us_treasury_yield_long_term_score
         other_planner_rewards = (us_imperialism_level_score \
@@ -1728,8 +1767,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # other_planner_rewards = us_imperialism_level_score + income_security_poverty_reduction_score \
         #     + social_security_poverty_reduction_score + medicare_medicaid_poverty_reduction_score + inflation_score
         rew[self.world.planner.idx] = (planner_rewards + other_planner_rewards) / (self.reward_normalization_factor) 
-
-        if self.world.timestep % 30 == 0: # or self.world.timestep == 405 or self.world.timestep == 1:
+        if self.world.timestep == 1 : 
+            print("Real World Data Subsidy: ", np.sum(self.world.real_world_subsidy))
+        if self.world.timestep % 30 == 0 or self.world.timestep % 365 == 0 or self.world.timestep <= 29: # or self.world.timestep == 405 or self.world.timestep == 1:
             print("\nThis timestep: ", self.world.timestep)
             print("\n------------------")
             print("Observations: ", list(self.world.global_state.keys()))
@@ -1749,9 +1789,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     - np.average(self.world.global_state["Postsubsidy Productivity"][self.world.timestep - 1]))
             print("Current Subsidy Quantitative Policy Level: ", self.world.planner.state["Current Subsidy Quantitative Policy Level"])
             print("Total Amount Subsidized (trillion $): ", np.sum(self.world.global_state["Subsidy"][1:], axis=(0, 1)) / 1e12)
+            print("Real World Data Subsidy: ", np.sum(self.world.real_world_subsidy[1:], axis=(0, 1)))
             print("US Tax Wedge: ", self.world.global_state["US Tax Wedge"])
             print("US Federal Deficit: ", (self.world.global_state["US Federal Deficit"]))
             print("US Federal Interest Payment: ", self.world.global_state["US Federal Interest Payment"])
+            print("Federal Reserve Fund Rate: ", self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep])
+            print("US Treasury Yield Long Term: ", self.world.global_state["US Treasury Yield Long Term"])
             print("US Government Revenue: ", np.sum(self.world.global_state["US Government Revenue"]))
             print("US Health Index: ", self.world.planner.state["Health Index"])
 
@@ -1775,7 +1818,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("Reward Inflation Score: ", inflation_score)
             print("Reward Other Reward Score: ", other_planner_rewards)
             print("------------------\n")
-            if self.csv_validation:
+            if self.csv_validation and self.world.timestep % 365 != 0 and self.world.timestep >= 29:
                 with open(csv_file_path, mode='a', newline='') as file:
                     writer = csv.DictWriter(file, fieldnames=headers)
                     
@@ -1792,21 +1835,23 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         "Vaccinated (% of population)": np.sum(self.world.global_state["Vaccinated"][self.world.timestep], axis=0) / self.us_population * 100,
                         "Deaths (thousands)": np.sum(self.world.global_state["Deaths"][self.world.timestep], axis=0) / 1e3,
                         "Mean Unemployment Rate (%)": self.world.planner.state["Total Unemployed"] / self.us_population * 100,
-                        "US Debt": self.world.global_state["US Debt"],
-                        "US GDP": self.world.global_state["US GDP"],
+                        "US Debt (USD)": self.world.global_state["US Debt"],
+                        "US GDP (USD)": self.world.global_state["US GDP"],
                         "Post-productivity (trillion $)": np.sum(self.world.global_state["Postsubsidy Productivity"][1:], axis=(0, 1)) / 1e12,
                         "Current Subsidy Quantitative Policy Level": self.world.planner.state["Current Subsidy Quantitative Policy Level"],
-                        "Total Subsidies": self.world.planner.state["Total Subsidy"],
-                        "US Tax Wedge": self.world.global_state["US Tax Wedge"],
-                        "US Federal Deficit": np.sum(self.world.global_state["US Federal Deficit"]),
-                        "US Federal Interest Payment": self.world.global_state["US Federal Interest Payment"],
-                        "US Government Revenue": np.sum(self.world.global_state["US Government Revenue"]),
+                        "Total Subsidies (USD)": self.world.planner.state["Total Subsidy"],
+                        "US Tax Wedge ('%' of GDP)": self.world.global_state["US Tax Wedge"] * 100,
+                        "US Federal Deficit (USD)": np.sum(self.world.global_state["US Federal Deficit"]),
+                        "US Federal Interest Payment (USD)": self.world.global_state["US Federal Interest Payment"],
+                        "Federal Reserve Fund Rate (%)": self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep],
+                        "US Treasury Yield Long Term (%)": self.world.global_state["US Treasury Yield Long Term"] * 100,
+                        "US Government Revenue (USD)": np.sum(self.world.global_state["US Government Revenue"]),
                         "US Health Index": self.world.planner.state["Health Index"],
-                        "Defense Imperialism Spending": np.sum(USDefenseSpending),
-                        "Income Security Spending": np.sum(USIncomeSecurity),
-                        "Social Security Spending": np.sum(USSocialSecuritySpending),
-                        "Medicare Medicaid Spending": np.sum(USMedicareMedicaidSpending),
-                        "Federal Reserve Balance Sheet": self.world.global_state["Federal Reserve Balance Sheet"],
+                        "Defense Imperialism Spending (USD)": np.sum(USDefenseSpending),
+                        "Income Security Spending (USD)": np.sum(USIncomeSecurity),
+                        "Social Security Spending (USD)": np.sum(USSocialSecuritySpending),
+                        "Medicare Medicaid Spending (USD)": np.sum(USMedicareMedicaidSpending),
+                        "Federal Reserve Balance Sheet (USD)": self.world.global_state["Federal Reserve Balance Sheet"],
                         "Inflation": US_Inflation,
                         "US Treasury Yield": self.world.global_state["US Treasury Yield Long Term"],
                         "Defense Imperialism Index": self.world.planner.state["Defense Imperialism Index"],
@@ -2245,11 +2290,32 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         beta_i = (intercepts + slopes * stringency_level_tmk).astype(
             self.np_float_dtype
         )
-
+        vaccine_effectiveness_pfizer = [0.94, 0.94, 0.87, 0.87, 0.87, 0.96, 0.96, 0.89, 0.89, 0.89, 0.73, 0.57, 0.57, 0.48]
+        # January 2021 - vaccine arrived
+        # June 2021 - Delta, November 2021 - Omicron
+        # 94% among adults <2months after 2nd dose, pre-Delta period
+        # 96% among adults <2 months after 2nd dose, Delta period
+        # 87% among adults 4-5 months after 2nd dose, pre-Delta period
+        # 89% among adults 4-5 months after 2nd dose, Delta period
+        # 73% among adults <2 months after 2nd dose, Omicron period
+        # 57% among adults 4-5 months after 2nd dose, Omicron period
+        # 96% among adults <2 months after 3rd dose, Delta period
+        # 89% among adults <2 months after 3rd dose, Omicron period
+        # 66% among adults 4-5 months after 3rd dose, Omicron period
+        # 72% among adults ages 50-64 years after 4th dose, Omicron period
+        # 76% among adults ages 65 years and older after 4th dose, Omicron period
+        # 48% among immunocompromised adults after 4th dose, Omicron period
+        
+        # 11 months - 330 days after March 2020, we have the covid vaccine in January 2021
+        vaccine_effectiveness = 1
+        # if self.world.timestep >= 330 and self.world.timestep % 30 == 0:
+        #     month = (self.world.timestep - 330 / 30) if (self.world.timestep - 330 / 30) <= len(vaccine_effectiveness_pfizer) - 1 else len(vaccine_effectiveness_pfizer) - 1
+        #     vaccine_effectiveness = vaccine_effectiveness_pfizer[month]
+            
         small_number = 1e-10  # used to prevent indeterminate cases
         susceptible_fraction_vaccinated = np.minimum(
             np.ones((self.num_us_states), dtype=self.np_int_dtype),
-            num_vaccines_available_t / (S_tm1 + small_number),
+            num_vaccines_available_t * vaccine_effectiveness / (S_tm1 + small_number),
         ).astype(self.np_float_dtype)
         vaccinated_t = np.minimum(num_vaccines_available_t, S_tm1)
 
@@ -2262,11 +2328,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         neighborhood_SI_over_N = (S_tm1 / self.us_state_population) * I_tm1
         dS_t = (
             -beta_i * neighborhood_SI_over_N * (1 - susceptible_fraction_vaccinated)
-            - vaccinated_t
+            - vaccinated_t * vaccine_effectiveness
         ).astype(self.np_float_dtype)
 
         # I -> R; dR
-        dR_t = (self.gamma * I_tm1 + vaccinated_t).astype(self.np_float_dtype)
+        dR_t = (self.gamma * I_tm1 + vaccinated_t * vaccine_effectiveness).astype(self.np_float_dtype)
 
         # dI from d(S + I + R) = 0
         # ------------------------

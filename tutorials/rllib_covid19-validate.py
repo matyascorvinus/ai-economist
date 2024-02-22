@@ -1,5 +1,5 @@
 import os
-path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-16"
+path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-19"
 env_config_dict = {
     # Scenario name - determines which scenario class to use
     "scenario_name": "CovidAndEconomySimulation",
@@ -33,7 +33,7 @@ env_config_dict = {
     # Date (YYYY-MM-DD) to start the simulation.
     "start_date": "2020-03-22",
     # How long to run the simulation for (in days)
-    "episode_length": 1014, # From 2020-03-22 to 2022-12-31
+    "episode_length": 440, # 1014 days From 2020-03-22 to 2022-12-31
 
     # use_real_world_data (bool): Replay what happened in the real world.
     # Real-world data comprises SIR (susceptible/infected/recovered),
@@ -97,6 +97,8 @@ env_obj = RLlibEnvWrapper({"env_config_dict": env_config_dict})
 import ray
 from ray.rllib.agents.ppo import PPOTrainer
 from ray import tune
+
+import ai_economist
 policies = {
     "a": (
         None,  # uses default policy
@@ -175,5 +177,39 @@ trainer = PPOTrainer(
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-07_10-11-58x_kh6mtg/checkpoint_40/checkpoint-40')
-trainer.train()
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-19_08-23-16saul5gjv/checkpoint_40/checkpoint-40')
+# env_config['evaluation_num_workers'] = 3
+# env_config['evaluation_interval'] = 1  # <-- HERE: must set this to > 0!
+# trainer._evaluate()
+
+# trainer.train()
+calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
+
+DATE_FORMAT = "%Y-%m-%d"
+obs = calibrated_env.reset();
+print(calibrated_env.us_state_idx_to_state_name.items())
+for _ in range(calibrated_env.episode_length):
+    # Set initial states
+    agent_states = {}
+    for agent_idx in range(env_obj.env.n_agents):
+        agent_states[str(agent_idx)] = trainer.get_policy("a").get_initial_state()
+    planner_states = trainer.get_policy("p").get_initial_state()   
+
+    actions = {}
+    for agent_idx in range(env_obj.env.n_agents):
+        # Use the trainer object directly to sample actions for each agent
+        actions[str(agent_idx)] = trainer.compute_action(
+            obs[str(agent_idx)], 
+            agent_states[str(agent_idx)], 
+            policy_id="a",
+            full_fetch=False
+        )
+
+    # Action sampling for the planner
+    actions["p"] = trainer.compute_action(
+        obs['p'], 
+        planner_states, 
+        policy_id='p',
+        full_fetch=False
+    )
+    obs, rew, done, info = env_obj.step(actions)        
