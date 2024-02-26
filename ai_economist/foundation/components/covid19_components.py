@@ -496,8 +496,10 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     ] = daily_statewise_subsidy
                     self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
 
-                    self.world.planner.state["Federal Reserve Balance Sheet"] = (self.world.global_state["Federal Reserve Balance Sheet"] + np.sum(self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index] * 10**6)) 
-                    self.world.global_state["Federal Reserve Balance Sheet"] += np.sum(self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index] * 10**6)
+                    self.world.planner.state["Federal Reserve Balance Sheet"] = self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index][0] * 10**6  \
+                        if self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index][0] != 0 else self.world.planner.state["Federal Reserve Balance Sheet"]
+                    self.world.global_state["Federal Reserve Balance Sheet"] = self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index][0] * 10**6 \
+                        if self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index][0] != 0 else self.world.global_state["Federal Reserve Balance Sheet"]
             else:
                 # Update the subsidy level only every self.subsidy_quantitative_policy_interval, since the
                 # other actions are masked out.
