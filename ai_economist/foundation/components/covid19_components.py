@@ -117,7 +117,7 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
         # return self.masks
         for agent in self.world.agents:
             
-            if self.world.use_real_world_policies:
+            if self.world.use_real_world_policies or self.world.state_governments_policies_only:
                 self.masks[agent.idx] = self.default_agent_action_mask
             else:
                 if self.world.timestep < self.action_in_cooldown_until[agent.idx]:
@@ -208,7 +208,7 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
             for agent in self.world.agents:
                 # if(agent.idx == 50): 
                 #     continue
-                if self.world.use_real_world_policies:
+                if self.world.use_real_world_policies or self.world.state_governments_policies_only:
                     # Use the action taken in the previous timestep
                     action = self.world.real_world_stringency_policy[
                         self.world.timestep - 1, agent.idx
@@ -229,12 +229,6 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
                 )
 
                 # Average stringency level is a number calculated from Stringency Level
-
-                self.world.global_state["Average Stringency Level"] = np.mean(self.world.global_state["Stringency Level"][self.world.timestep, agent.idx])
-                # Reduced gdp multiplier is a number calculated from Stringency Level
-                self.world.global_state["Reduced GDP Multiplier"] = \
-                    np.mean(self.world.global_state["Stringency Level"][self.world.timestep, agent.idx]
-                            * self.reduced_gdp_multiplier)
 
                 # Update the agent's state
                 agent.state[
@@ -258,6 +252,12 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
                         self.action_in_cooldown_until[
                             agent.idx
                         ] += self.action_cooldown_period
+            
+            self.world.global_state["Average Stringency Level"] = np.mean(self.world.global_state["Stringency Level"][self.world.timestep])
+            # Reduced gdp multiplier is a number calculated from Stringency Level
+            self.world.global_state["Reduced GDP Multiplier"][self.world.timestep] = \
+                np.mean(self.world.global_state["Stringency Level"][self.world.timestep]
+                        * self.reduced_gdp_multiplier)
 
     def generate_observations(self):
 
@@ -310,8 +310,8 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
     def __init__(
         self,
         *base_component_args,
-        subsidy_quantitative_policy_interval=30, #90,
-        num_subsidy_quantitative_policy_level=143,
+        subsidy_quantitative_policy_interval=15, #90,
+        num_subsidy_quantitative_policy_level=15,
         max_annual_monetary_unit_per_person=20000,
         **base_component_kwargs,
     ):
@@ -456,7 +456,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     self._subsidy_amount_per_level = (
                         self.world.us_population
                         * self.max_annual_monetary_unit_per_person
-                        / self.num_subsidy_quantitative_policy_level
+                        / 20
                         * self.subsidy_quantitative_policy_interval
                         / 365
                     )
@@ -478,21 +478,13 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     ):
                         self._subsidy_quantitative_policy_level_array[t_idx] += _subsidy_quantitative_policy_level
                 subsidy_quantitative_policy_level = self._subsidy_quantitative_policy_level_array[self.world.timestep - 1]
-                if self.world.timestep + 1 <= self._episode_length - 1:
-                    self.world.global_state["US Government Defense Spending"][self.world.timestep + 1] \
-                        = self.world.global_state["US Government Defense Spending"][self.world.timestep] 
-                    
-                    self.world.global_state["US Government Social Security Spending"][self.world.timestep + 1] \
-                        = self.world.global_state["US Government Social Security Spending"][self.world.timestep] 
-                    
-                    self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep + 1] \
-                        = self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] 
-                    
-                    self.world.global_state["US Government Income Security"][self.world.timestep + 1] \
-                        = self.world.global_state["US Government Income Security"][self.world.timestep] 
-                    
+                if self.world.timestep == 0:
                     self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] = \
-                        self.world.real_world_fed_fund_rate[self.world.timestep] 
+                            self.world.real_world_fed_fund_rate[self.world.timestep][0]
+                if self.world.timestep + 1 <= self._episode_length - 1 and self.world.timestep + self.world.start_date_index <= self._episode_length - 1:
+                    self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep + 1] = \
+                        self.world.real_world_fed_fund_rate[self.world.timestep + 1][0] if self.world.real_world_fed_fund_rate[self.world.timestep + 1][0] != 0 else \
+                        self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]
                     
                     subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level / 20
                     daily_statewise_subsidy = (
@@ -504,8 +496,8 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     ] = daily_statewise_subsidy
                     self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
 
-                    self.world.planner.state["Federal Reserve Balance Sheet"] += (self.world.global_state["Federal Reserve Balance Sheet"] + np.sum(self.world.real_world_quantitative[self.world.timestep])) 
-                    self.world.global_state["Federal Reserve Balance Sheet"] += np.sum(self.world.real_world_quantitative[self.world.timestep])
+                    self.world.planner.state["Federal Reserve Balance Sheet"] = (self.world.global_state["Federal Reserve Balance Sheet"] + np.sum(self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index] * 10**6)) 
+                    self.world.global_state["Federal Reserve Balance Sheet"] += np.sum(self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index] * 10**6)
             else:
                 # Update the subsidy level only every self.subsidy_quantitative_policy_interval, since the
                 # other actions are masked out.
@@ -547,7 +539,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                         self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] 
                     
                     hundred_billions_divided_by_365 = 10**9 / 365
-                    if subsidy_quantitative_policy_level == 0 or subsidy_quantitative_policy_level == 1:
+                    if subsidy_quantitative_policy_level == 0 or subsidy_quantitative_policy_level == 1: # 0 - 1
                         sign = 1 if subsidy_quantitative_policy_level == 1 else -1
 
                         # if rate go to 0.25, then no more reduction
@@ -555,12 +547,13 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                             sign = 0
                         self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep + 1] = \
                             self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] + sign * interest_hikes
-                    elif subsidy_quantitative_policy_level > 1 and subsidy_quantitative_policy_level <= 22:
+                    elif subsidy_quantitative_policy_level == 2 or subsidy_quantitative_policy_level == 3: # 2 - 3
                         # if subsidy_quantitative_policy_level = 2, mean there is no subsidies
-                        subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level - 2 / 20
+                        plus_or_minus = 1 if subsidy_quantitative_policy_level == 3 else -1
+                        subsidy_quantitative_policy_level_frac = 0.5
                         daily_statewise_subsidy = (
                             subsidy_quantitative_policy_level_frac * self.max_daily_subsidy_per_state
-                        )
+                        ) * plus_or_minus
 
                         self.world.global_state["Subsidy"][
                             self.world.timestep
@@ -568,12 +561,13 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                         self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
                     # quantitative easing action - only increase the self.world.global_state["Quantitative"]
                     # value where level 20 to 30 is the quantitative tightening action, from 31 to 40 is the quantitative easing action
-                    elif subsidy_quantitative_policy_level > 22 \
-                        and subsidy_quantitative_policy_level <= 42:
-                        subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 2 - 30) / 10
+                    elif subsidy_quantitative_policy_level == 4 \
+                        or subsidy_quantitative_policy_level == 5: # 4 - 5
+                        plus_or_minus = 1 if subsidy_quantitative_policy_level == 5 else -1
+                        subsidy_quantitative_policy_level_frac = 0.5
                         daily_statewise_quantitative = (
                             subsidy_quantitative_policy_level_frac * self.max_daily_quantitative_per_state
-                        )
+                        ) * plus_or_minus
 
                         # self.world.global_state["Quantitative"][
                         #     self.world.timestep
@@ -584,9 +578,10 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                         else:
                             self.world.planner.state["Federal Reserve Balance Sheet"] += (self.world.global_state["Federal Reserve Balance Sheet"] + np.sum(daily_statewise_quantitative)) 
                             self.world.global_state["Federal Reserve Balance Sheet"] += np.sum(daily_statewise_quantitative)
-                    elif subsidy_quantitative_policy_level > 42 \
-                        and subsidy_quantitative_policy_level <= 62:
-                        subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 2 - 50) / 10
+                    elif subsidy_quantitative_policy_level == 6 \
+                        or subsidy_quantitative_policy_level == 7: # 6 - 7
+                        plus_or_minus = 1 if subsidy_quantitative_policy_level == 7 else -1
+                        subsidy_quantitative_policy_level_frac = 1 * plus_or_minus
                         if (subsidy_quantitative_policy_level_frac < 0):
                             # Taxation cannot be lower than 10% of GDP, so the federal government cannot lower the tax if the tax wedge is 10% already
                             if self.world.global_state["US Tax Wedge"] + subsidy_quantitative_policy_level_frac * 0.1 >= 0.1:
@@ -596,27 +591,31 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                             if self.world.global_state["US Tax Wedge"] + subsidy_quantitative_policy_level_frac * 0.1 <= 0.7:
                                 self.world.global_state["US Tax Wedge"] += subsidy_quantitative_policy_level_frac * 0.1 # increasing 10% in GDP Taxation Wedge
                     
-                    elif subsidy_quantitative_policy_level > 62 \
-                        and subsidy_quantitative_policy_level <= 82:
-                        subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 2 - 70) / 10
+                    elif subsidy_quantitative_policy_level == 8 \
+                        or subsidy_quantitative_policy_level == 9: # 8 - 9
+                        plus_or_minus = 1 if subsidy_quantitative_policy_level == 9 else -1
+                        subsidy_quantitative_policy_level_frac = 1 * plus_or_minus
                         self.world.global_state["US Government Defense Spending"][self.world.timestep + 1] \
                             = self.world.global_state["US Government Defense Spending"][self.world.timestep] + subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
 
-                    elif subsidy_quantitative_policy_level > 92 \
-                        and subsidy_quantitative_policy_level <= 102:
-                        subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 2 - 90) / 10
+                    elif subsidy_quantitative_policy_level == 10 \
+                        or subsidy_quantitative_policy_level == 11: # 10 - 11
+                        plus_or_minus = 1 if subsidy_quantitative_policy_level == 11 else -1
+                        subsidy_quantitative_policy_level_frac = plus_or_minus * 1
                         self.world.global_state["US Government Social Security Spending"][self.world.timestep + 1] \
                             = self.world.global_state["US Government Social Security Spending"][self.world.timestep] + subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
 
-                    elif subsidy_quantitative_policy_level > 102 \
-                        and subsidy_quantitative_policy_level <= 122:
-                        subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 2 - 110) / 10
+                    elif subsidy_quantitative_policy_level == 12 \
+                        or subsidy_quantitative_policy_level == 13:
+                        plus_or_minus = 1 if subsidy_quantitative_policy_level == 13 else -1
+                        subsidy_quantitative_policy_level_frac = 1 * plus_or_minus
                         self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep + 1] \
                             = self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] + subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
                     
-                    elif subsidy_quantitative_policy_level > 122 \
-                        and subsidy_quantitative_policy_level <= 142:
-                        subsidy_quantitative_policy_level_frac = (subsidy_quantitative_policy_level - 2 - 130) / 10
+                    elif subsidy_quantitative_policy_level == 14 \
+                        or subsidy_quantitative_policy_level == 15:
+                        plus_or_minus = 1 if subsidy_quantitative_policy_level == 15 else -1
+                        subsidy_quantitative_policy_level_frac = 1 * plus_or_minus
                         self.world.global_state["US Government Income Security"][self.world.timestep + 1] \
                             = self.world.global_state["US Government Income Security"][self.world.timestep] + subsidy_quantitative_policy_level_frac * hundred_billions_divided_by_365
                 
@@ -809,8 +808,13 @@ class VaccinationCampaign(BaseComponent):
             # Vaccines are delivered at the start of each interval.
             if (self.world.timestep % self.delivery_interval) != 0:
                 return
-
             # Deliver vaccines to each state
+            total_vaccine = 0
+            for aidx, agent in enumerate(self.world.agents):  
+                total_vaccine += agent.state["Total Vaccinated"]
+            # US can only get 68% of their population to get the vaccine
+            if total_vaccine / self.world.us_population * 100 > 68:
+                return 
             for aidx, vaccines in enumerate(self.num_vaccines_per_delivery):
                 self.world.agents[aidx].state["Vaccines Available"] += vaccines
 

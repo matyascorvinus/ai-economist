@@ -1,5 +1,5 @@
 import os
-path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-19"
+path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-26"
 env_config_dict = {
     # Scenario name - determines which scenario class to use
     "scenario_name": "CovidAndEconomySimulation",
@@ -14,9 +14,9 @@ env_config_dict = {
         }},
         {"FederalGovernmentSubsidyAndQuantitativePolicies": {
             # The number of subsidy levels.
-            "num_subsidy_quantitative_policy_level": 143,
+            "num_subsidy_quantitative_policy_level": 15,
             # The number of days over which the total subsidy amount is evenly rolled out.
-            "subsidy_quantitative_policy_interval": 90,
+            "subsidy_quantitative_policy_interval": 15,
             # The maximum annual subsidy that may be allocated per person.
             "max_annual_monetary_unit_per_person": 20000,
         }},
@@ -33,7 +33,7 @@ env_config_dict = {
     # Date (YYYY-MM-DD) to start the simulation.
     "start_date": "2020-03-22",
     # How long to run the simulation for (in days)
-    "episode_length": 440, # 1014 days From 2020-03-22 to 2022-12-31
+    "episode_length": 1014, # 1014 days From 2020-03-22 to 2022-12-31
 
     # use_real_world_data (bool): Replay what happened in the real world.
     # Real-world data comprises SIR (susceptible/infected/recovered),
@@ -91,6 +91,7 @@ env_config_dict = {
     "world_size": [1, 1],
     # Flag to collate all the agents' observations, rewards and done flags into a single matrix
     "collate_agent_step_and_reset_data": False,
+    "csv_file_path": "simulation_results-real_data.csv"
 }
 from rllib.env_wrapper import RLlibEnvWrapper
 env_obj = RLlibEnvWrapper({"env_config_dict": env_config_dict})
@@ -177,7 +178,7 @@ trainer = PPOTrainer(
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-19_08-23-16saul5gjv/checkpoint_40/checkpoint-40')
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-24_20-15-51erwyplqx/checkpoint_40/checkpoint-40')
 # env_config['evaluation_num_workers'] = 3
 # env_config['evaluation_interval'] = 1  # <-- HERE: must set this to > 0!
 # trainer._evaluate()
