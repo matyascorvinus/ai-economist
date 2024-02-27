@@ -33,7 +33,7 @@ env_config_dict = {
     # Date (YYYY-MM-DD) to start the simulation.
     "start_date": "2020-03-22",
     # How long to run the simulation for (in days)
-    "episode_length": 1014, # 1014 days From 2020-03-22 to 2022-12-31
+    "episode_length": 961, # 1014 days From 2020-03-22 to 2022-12-31
 
     # use_real_world_data (bool): Replay what happened in the real world.
     # Real-world data comprises SIR (susceptible/infected/recovered),

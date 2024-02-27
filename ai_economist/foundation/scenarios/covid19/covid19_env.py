@@ -275,6 +275,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # For date logging (This will be overwritten in additional_reset_steps;
         # see below)
         self.current_date = None
+        self.delete_csv_file = True
+        self.delete_csv_day_file = True
 
         # real-life nominal GDP
         # https://data.worldbank.org/indicator/NY.GDP.MKTP.CD?locations=US
@@ -1282,7 +1284,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     self.world.global_state["US Treasury Yield Long Term"] 
                 self.world.global_state["US Debt"] = self._real_world_data["debt"][self.world.timestep][0] if self._real_world_data["debt"][self.world.timestep][0] != 0 else \
                     self.world.global_state["US Debt"] 
-                self.world.global_state["Inflation"] = self._real_world_data["inflation"][self.world.timestep][0] / 100 if self._real_world_data["inflation"][self.world.timestep][0] != 0 else \
+                self.world.global_state["Inflation"] = self._real_world_data["inflation"][self.world.timestep - 1][0] / 100 if int(self._real_world_data["inflation"][self.world.timestep - 1][0]) != 0 else \
                     self.world.global_state["Inflation"]
                 theYearIndex = int(self.world.timestep / 365)
                 if theYearIndex == 1:
@@ -1965,9 +1967,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("Reward Other Reward Score: ", other_planner_rewards)
             print("------------------\n")
             if self.csv_validation and self.world.timestep % 365 != 0 and self.world.timestep >= 30:
+
+                print(f"Simulation data saved to {self.csv_file_path}")
+                if(os.path.exists(self.csv_file_path) and os.path.isfile(self.csv_file_path)) and self.delete_csv_file: 
+                    os.remove(self.csv_file_path) 
+                self.delete_csv_file = False
                 with open(self.csv_file_path, mode='a', newline='') as file:
                     writer = csv.DictWriter(file, fieldnames=headers)
-                    
                     # Write the header only once, assuming this script may be run multiple times
                     if file.tell() == 0:
                         writer.writeheader()
@@ -2014,11 +2020,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     
                     # Write the data for this timestep or run
                     writer.writerow(data)
-
-                print(f"Simulation data saved to {self.csv_file_path}")
         
         # Days
         if self.csv_validation:
+            print(f"Simulation data saved to {self.csv_file_path_day}")
+            if(os.path.exists(self.csv_file_path_day) and os.path.isfile(self.csv_file_path_day)) and self.delete_csv_day_file: 
+                os.remove(self.csv_file_path_day) 
+            self.delete_csv_day_file = False
             with open(self.csv_file_path_day, mode='a', newline='') as file:
                 writer = csv.DictWriter(file, fieldnames=headers_day)
                 
@@ -2069,7 +2077,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 # Write the data for this timestep or run
                 writer.writerow(data)
 
-            print(f"Simulation data saved to {self.csv_file_path_day}")
 
     
         return rew

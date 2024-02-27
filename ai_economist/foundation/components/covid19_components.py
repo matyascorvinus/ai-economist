@@ -496,10 +496,10 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     ] = daily_statewise_subsidy
                     self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
 
-                    self.world.planner.state["Federal Reserve Balance Sheet"] = self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index][0] * 10**6  \
-                        if self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index][0] != 0 else self.world.planner.state["Federal Reserve Balance Sheet"]
-                    self.world.global_state["Federal Reserve Balance Sheet"] = self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index][0] * 10**6 \
-                        if self.world.real_world_quantitative[self.world.timestep + self.world.start_date_index][0] != 0 else self.world.global_state["Federal Reserve Balance Sheet"]
+                    self.world.planner.state["Federal Reserve Balance Sheet"] = self.world.real_world_quantitative[self.world.timestep - 1][0] * 10**6  \
+                        if self.world.real_world_quantitative[self.world.timestep - 1][0] != 0 else self.world.planner.state["Federal Reserve Balance Sheet"]
+                    self.world.global_state["Federal Reserve Balance Sheet"] = self.world.real_world_quantitative[self.world.timestep - 1][0] * 10**6 \
+                        if self.world.real_world_quantitative[self.world.timestep - 1][0] != 0 else self.world.global_state["Federal Reserve Balance Sheet"]
             else:
                 # Update the subsidy level only every self.subsidy_quantitative_policy_interval, since the
                 # other actions are masked out.
@@ -524,7 +524,7 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                 # "US Government Non Defense Others Spending",
                 # Update subsidy - quantitative easing level
                 interest_hikes = 0.25
-                if self.world.timestep + 1 <= self._episode_length - 1:
+                if self.world.timestep + 1 <= self._episode_length:
                     self.world.global_state["US Government Defense Spending"][self.world.timestep + 1] \
                         = self.world.global_state["US Government Defense Spending"][self.world.timestep] 
                     
