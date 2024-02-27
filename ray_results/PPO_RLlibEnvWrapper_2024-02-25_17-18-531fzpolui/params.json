@@ -1,0 +1,72 @@
+{
+  "env_config": {
+    "env_config_dict": {
+      "collate_agent_step_and_reset_data": false,
+      "components": [
+        {
+          "ControlUSStateOpenCloseStatus": {
+            "action_cooldown_period": 28
+          }
+        },
+        {
+          "FederalGovernmentSubsidyAndQuantitativePolicies": {
+            "max_annual_monetary_unit_per_person": 20000,
+            "num_subsidy_quantitative_policy_level": 15,
+            "subsidy_quantitative_policy_interval": 15
+          }
+        },
+        {
+          "VaccinationCampaign": {
+            "daily_vaccines_per_million_people": 3000,
+            "delivery_interval": 1,
+            "vaccine_delivery_start_date": "2021-01-12"
+          }
+        }
+      ],
+      "csv_validation": false,
+      "economic_reward_crra_eta": 2,
+      "episode_length": 614,
+      "health_priority_scaling_agents": 1,
+      "health_priority_scaling_planner": 1,
+      "infection_too_sick_to_work_rate": 0.1,
+      "n_agents": 51,
+      "path_to_data_and_fitted_params": "../../../datasets/covid19_datasets/2024-02-25",
+      "pop_between_age_18_65": 0.6,
+      "risk_free_interest_rate": 0.03,
+      "scenario_name": "CovidAndEconomySimulation",
+      "start_date": "2020-03-22",
+      "state_governments_policies_only": true,
+      "use_real_world_data": false,
+      "use_real_world_policies": false,
+      "world_size": [
+        1,
+        1
+      ]
+    },
+    "num_envs_per_worker": 1
+  },
+  "multiagent": {
+    "policies": {
+      "a": [
+        null,
+        "Dict('action_mask': Box(-1e+20, 1e+20, (11,), float32), 'flat': Box(-1e+20, 1e+20, (157,), float32), 'time': Box(-1e+20, 1e+20, (1,), float64), 'world-agent_index': Box(-1455191522, 1455191522, (51, 51), int32), 'world-agent_state': Box(-1e+20, 1e+20, (6, 51), float64))",
+        "Discrete(11)",
+        {}
+      ],
+      "p": [
+        null,
+        "Dict('action_mask': Box(-1e+20, 1e+20, (16,), float32), 'flat': Box(-1e+20, 1e+20, (157,), float32), 'time': Box(-1e+20, 1e+20, (1,), float64), 'world-agent_index': Box(-1455191522, 1455191522, (51, 51), int32), 'world-agent_state': Box(-1e+20, 1e+20, (6, 51), float64))",
+        "MultiDiscrete([16])",
+        {}
+      ]
+    },
+    "policies_to_train": [
+      "a",
+      "p"
+    ],
+    "policy_mapping_fn": "<function <lambda> at 0x7f9a18d473b0>"
+  },
+  "num_envs_per_worker": 1,
+  "num_gpus": 1,
+  "num_workers": 1
+}
