@@ -32,10 +32,10 @@ headers = [
 headers_day = [
     "Day", "Susceptibles", "Infected", "Recovered", "Vaccinated (% of population)", "Deaths (thousands)" ,"Mean Unemployment Rate (%)","US Debt (USD)", "US GDP (USD)", 
     "Post-productivity (trillion $)", "Current Subsidy Quantitative Policy Level",
-    "Total Subsidies (USD)", "US Tax Wedge ('%' of GDP)", "US Federal Deficit (USD)", "US Federal Interest Payment (USD)", "Federal Reserve Fund Rate (%)", "US Treasury Yield Long Term (%)",
-    "US Government Revenue (USD)", "US Health Index", "Defense Imperialism Spending (USD)", "Income Security Spending (USD)",
-    "Social Security Spending (USD)", "Medicare Medicaid Spending (USD)", "Federal Reserve Balance Sheet (USD)", "Inflation", "US Treasury Yield",
-    "Defense Imperialism Index", "Income Security Index", "Social Security Index", "Medicare Medicaid Index",
+    "Total Subsidies (USD)", "US Tax Wedge ('%' of GDP)", "US Federal Deficit (USD)", "US Federal Interest Payment (USD)",
+    "US Government Revenue (USD)", "Defense Imperialism Spending (USD)", "Income Security Spending (USD)",
+    "Social Security Spending (USD)", "Medicare Medicaid Spending (USD)", "Federal Reserve Balance Sheet (USD)", "Federal Reserve Fund Rate (%)", "Inflation", "US Treasury Yield Long Term (%)",
+    "Defense Index", "Income Security Index", "Social Security Index", "Medicare Medicaid Index",
     "Inflation Index", "US Treasury Yield Index", "Health Index", "Economic Index", "Reward", "Reward Social Welfare"
 ]
 
@@ -172,6 +172,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         interest_hikes_shock_gdp=0.5, # 0.5% of GDP for every 100 basic point rate hikes
         state_governments_policies_only=False, # let the real-world state government handle the covid-19 restriction, and the federal government still operated by AI
         csv_file_path = 'simulation_results.csv',
+        average_GDP_growth = 2/100, # average GDP Growth of the USA in the past 20 years
         **base_env_kwargs,
     ):
         # verify_activation_code()
@@ -486,6 +487,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         # The US government spending multiplier is 0.8, according to the Congressional Budget Office. https://www.crfb.org/papers/comparing-fiscal-multipliers
         self.us_government_spending_economic_multiplier = self.np_float_dtype(us_government_spending_economic_multiplier)
+        self.average_GDP_growth = average_GDP_growth
         self.num_days_in_an_year = 365
         self.daily_production_per_worker = (
             self.gdp_per_worker / self.num_days_in_an_year
@@ -1488,7 +1490,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     # GDP_Growth = (np.sum(self.world.global_state["Postsubsidy Productivity"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365], axis=(0, 1)) - np.sum(self.maximum_productivity_t)) \
                     #         / np.sum(self.maximum_productivity_t)
                     multiplier_spending_effect = -self.us_government_spending_economic_multiplier if fiscal_shock < 0 else -1
-                    GDP_Growth = 1 - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
+                    GDP_Growth = 1 + self.average_GDP_growth - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
                         + fiscal_shock * multiplier_spending_effect
                     print("GDP Growth: ", GDP_Growth)
                     print("Reduced GDP Multiplier (1 year): ", 
@@ -2051,25 +2053,23 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     "US Tax Wedge ('%' of GDP)": self.world.global_state["US Tax Wedge"],
                     "US Federal Deficit (USD)": (self.world.global_state["US Federal Deficit"]),
                     "US Federal Interest Payment (USD)": self.world.global_state["US Federal Interest Payment"],
-                    "Federal Reserve Fund Rate (%)": self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep],
-                    "US Treasury Yield Long Term (%)": self.world.global_state["US Treasury Yield Long Term"],
-                    "US Government Revenue (USD)": (self.world.global_state["US Government Revenue"][self.world.timestep]),
-                    "US Health Index": self.world.planner.state["Health Index"],
-                    "Defense Imperialism Spending (USD)": (USDefenseSpending[self.world.timestep]),
-                    "Income Security Spending (USD)": (USIncomeSecurity[self.world.timestep]),
-                    "Social Security Spending (USD)": (USSocialSecuritySpending[self.world.timestep]),
-                    "Medicare Medicaid Spending (USD)": (USMedicareMedicaidSpending[self.world.timestep]),
+                    "US Government Revenue (USD)": np.sum(self.world.global_state["US Government Revenue"]),
+                    "Defense Imperialism Spending (USD)": np.sum(USDefenseSpending),
+                    "Income Security Spending (USD)": np.sum(USIncomeSecurity),
+                    "Social Security Spending (USD)": np.sum(USSocialSecuritySpending),
+                    "Medicare Medicaid Spending (USD)": np.sum(USMedicareMedicaidSpending),
                     "Federal Reserve Balance Sheet (USD)": self.world.global_state["Federal Reserve Balance Sheet"],
+                    "Federal Reserve Fund Rate (%)": self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep],
                     "Inflation": US_Inflation,
-                    "US Treasury Yield": self.world.global_state["US Treasury Yield Long Term"],
-                    "Defense Imperialism Index": self.world.planner.state["Defense Imperialism Index"],
+                    "US Treasury Yield Long Term (%)": self.world.global_state["US Treasury Yield Long Term"],
+                    "Defense Index": self.world.planner.state["Defense Imperialism Index"],
                     "Income Security Index": self.world.planner.state["Income Security Index"],
                     "Social Security Index": self.world.planner.state["Social Security Index"],
                     "Medicare Medicaid Index": self.world.planner.state["Medicare Medicaid Index"],
                     "Inflation Index": self.world.planner.state["Inflation Index"],
                     "US Treasury Yield Index": self.world.planner.state["US Treasury Yield Index"],
                     "Health Index":  self.world.planner.state["Health Index"],
-                    "Economic Index": self.world.planner.state["Economic Index"],
+                    "Economic Index": self.world.planner.state["Economic Index"], 
                     "Reward": rew[self.world.planner.idx],
                     "Reward Social Welfare": planner_rewards
                 }

@@ -1,5 +1,5 @@
 import os
-path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-26"
+path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-27"
 env_config_dict = {
     # Scenario name - determines which scenario class to use
     "scenario_name": "CovidAndEconomySimulation",
@@ -178,7 +178,7 @@ trainer = PPOTrainer(
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-24_20-15-51erwyplqx/checkpoint_40/checkpoint-40')
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-28_04-24-55l5kif0cf/checkpoint_40/checkpoint-40')
 # env_config['evaluation_num_workers'] = 3
 # env_config['evaluation_interval'] = 1  # <-- HERE: must set this to > 0!
 # trainer._evaluate()

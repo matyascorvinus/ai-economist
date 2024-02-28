@@ -1,5 +1,5 @@
 
-path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-26"
+path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-27"
 env_config_dict = {
     # Scenario name - determines which scenario class to use
     "scenario_name": "CovidAndEconomySimulation",
@@ -50,6 +50,7 @@ env_config_dict = {
     # Let the real-world state government handle the covid-19 restriction, and the federal government still operated by AI
     "state_governments_policies_only": True,
     "path_to_data_and_fitted_params": path_to_data_and_fitted_params,
+    "us_government_spending_economic_multiplier": 2.05,
 
     # A factor indicating how much more the
     # states prioritize health (roughly speaking, loss of lives due to

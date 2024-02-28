@@ -1,5 +1,5 @@
 import os
-path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-26"
+path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-27"
 env_config_dict = {
     # Scenario name - determines which scenario class to use
     "scenario_name": "CovidAndEconomySimulation",
@@ -49,7 +49,7 @@ env_config_dict = {
 
     # Let the real-world state government handle the covid-19 restriction, and the federal government still operated by AI
     "state_governments_policies_only": True,
-    "us_government_spending_economic_multiplier": 0.85,
+    "us_government_spending_economic_multiplier": 1.3,
 
     # A factor indicating how much more the
     # states prioritize health (roughly speaking, loss of lives due to
@@ -167,10 +167,6 @@ trainer = PPOTrainer(
 )
 
 # Number of US states: 51
-# self.us_gdp_2019:  21466585914800.0
-# self.us_federal_deficit:  2465753424.6575336
-# self.us_government_revenue:  9589041095.890411
-# self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
 # NUM_ITERS = 65
 # for iteration in range(NUM_ITERS):
 #     print(f'********** Iter : {iteration} **********')
@@ -181,12 +177,7 @@ trainer = PPOTrainer(
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-25_17-18-531fzpolui/checkpoint_40/checkpoint-40')
-# env_config['evaluation_num_workers'] = 3
-# env_config['evaluation_interval'] = 1  # <-- HERE: must set this to > 0!
-# trainer._evaluate()
-
-# trainer.train()
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-28_04-24-55l5kif0cf/checkpoint_25/checkpoint-25')
 calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
 
 DATE_FORMAT = "%Y-%m-%d"
