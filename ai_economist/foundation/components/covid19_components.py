@@ -479,13 +479,14 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                     ):
                         self._subsidy_quantitative_policy_level_array[t_idx] += _subsidy_quantitative_policy_level
                 subsidy_quantitative_policy_level = self._subsidy_quantitative_policy_level_array[self.world.timestep - 1]
-                if self.world.timestep == 0:
+                
+                if self.world.timestep == 1:
                     self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] = \
-                            self.world.real_world_fed_fund_rate[self.world.timestep][0]
-                if self.world.timestep + 1 <= self._episode_length - 1 and self.world.timestep + self.world.start_date_index <= self._episode_length - 1:
+                            self.world.real_world_fed_fund_rate[self.world.timestep - 1][0]
+                if self.world.timestep + 1 <= self._episode_length - 1:
                     self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep + 1] = \
-                        self.world.real_world_fed_fund_rate[self.world.timestep + 1][0] if self.world.real_world_fed_fund_rate[self.world.timestep + 1][0] != 0 else \
-                        self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]
+                    self.world.real_world_fed_fund_rate[self.world.timestep][0] if int(self.world.real_world_fed_fund_rate[self.world.timestep][0]) != 0 \
+                    else self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]
                     
                     subsidy_quantitative_policy_level_frac = subsidy_quantitative_policy_level / 20
                     daily_statewise_subsidy = (
@@ -552,20 +553,15 @@ class FederalGovernmentSubsidyAndQuantitativePolicies(BaseComponent):
                             self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] + sign * interest_hikes
                     elif subsidy_quantitative_policy_level == 2 or subsidy_quantitative_policy_level == 3: # 2 - 3
                         # if subsidy_quantitative_policy_level = 2, mean there is no subsidies
-                        plus_or_minus = 1 if subsidy_quantitative_policy_level == 3 else -1
+                        plus_or_minus = 1 if subsidy_quantitative_policy_level == 3 else 0
                         subsidy_quantitative_policy_level_frac = 0.5
                         daily_statewise_subsidy = (
                             subsidy_quantitative_policy_level_frac * self.max_daily_subsidy_per_state
                         ) * plus_or_minus
-                        if plus_or_minus == 1 or (plus_or_minus == -1 and self.world.planner.state["Total Subsidy"] + np.sum(daily_statewise_subsidy) >= 0):
-                            self.world.global_state["Subsidy"][
+                        self.world.global_state["Subsidy"][
                                 self.world.timestep
                             ] = daily_statewise_subsidy
-                            self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
-                        else:
-                            self.world.global_state["Subsidy"][
-                                self.world.timestep
-                            ] = 0
+                        self.world.planner.state["Total Subsidy"] += np.sum(daily_statewise_subsidy)
                     # quantitative easing action - only increase the self.world.global_state["Quantitative"]
                     # value where level 20 to 30 is the quantitative tightening action, from 31 to 40 is the quantitative easing action
                     elif subsidy_quantitative_policy_level == 4 \

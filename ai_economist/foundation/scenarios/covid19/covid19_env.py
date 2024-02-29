@@ -1160,7 +1160,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
             # Unemployment
             # ------------
-            if self.use_real_world_data:
+            if self.use_real_world_data or self.state_governments_policies_only:
                 num_unemployed_t = self._real_world_data["unemployed"][
                     self.start_date_index + curr_t
                 ]
@@ -1372,9 +1372,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 lengthYearCount = len(REAL_POTENTIAL_GDP_2019_2030)
                 theYearIndex = int(self.world.timestep / 365)
                 if self.world.timestep % 365 == 0 and self.world.timestep > 0 and self.world.timestep + 1 <= self.episode_length and theYearIndex <= lengthYearCount - 1: 
-                    
-                    print("theYearIndex: ", theYearIndex)
-                    print("theYearIndex 1: ", 365 * (theYearIndex - 1) + 1)
                     self.world.global_state["US Government Social Security Beneficiaries"] = \
                         self.world.global_state["US Government Social Security Beneficiaries"] + self.social_security_beneficiaries_growth
                     self.world.global_state["US Medicare Medicaid Beneficiaries"] = \
@@ -1408,15 +1405,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     total_federal_interest_payment = self.world.global_state["US Federal Interest Payment"] if \
                         self.world.global_state["US Federal Interest Payment"] > 0 else 0
                     fiscal_shock = shock_determinator * (np.abs(total_deficit) - np.abs(total_federal_interest_payment)) / self.world.global_state["US GDP"]
-                    monetary_shock = (self.world.global_state["Federal Reserve Balance Sheet"] - self.fed_reserve_balance_sheet) / self.world.global_state["US GDP"]
+                    monetary_shock = -(self.world.global_state["Federal Reserve Balance Sheet"] - self.fed_reserve_balance_sheet) / self.world.global_state["US GDP"]
                     if(self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] != self.fed_fund_rates):
                         monetary_shock += (self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] - self.fed_fund_rates) / 1 * (self.interest_hikes_shock_gdp / 100)
-                    
+                    self.fed_reserve_balance_sheet = self.world.global_state["Federal Reserve Balance Sheet"]
+                    self.fed_fund_rates = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]
                     H = 10 # horizon of simulation is the episode length - 10 years
 
                     shock = [monetary_shock, fiscal_shock] # fiscal shock. 0.01 is 1% of GDP.
-                    print('monetary_shock', monetary_shock)
-                    print('fiscal_shock', fiscal_shock)
+                    # print('monetary_shock', monetary_shock)
+                    # print('fiscal_shock', fiscal_shock)
                     fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
 
                     b_s_guess = np.array([0, 1])
@@ -1495,8 +1493,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     print("GDP Growth: ", GDP_Growth)
                     print("Reduced GDP Multiplier (1 year): ", 
                           np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
-                    print("Fiscal Shock: ", 
-                          fiscal_shock)
+                    print("Fiscal Shock: ", fiscal_shock)
+                    print("Monetary Shock: ", monetary_shock)
                     self.world.global_state["US GDP"] = self.world.global_state["US GDP"] * \
                         GDP_Growth
                     self.world.GDP_Growth = GDP_Growth
@@ -1507,8 +1505,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 # a 0.2 to 0.3 percentage point increase in interest rates
                 # -- https://www.crfb.org/papers/risks-and-threats-deficits-and-debt
                 # If inflation larger than 3%, then the Federal Reserve will increase the interest rate
-
-                
 
             # Update agent state
             # ------------------
@@ -1919,9 +1915,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # other_planner_rewards = us_imperialism_level_score + income_security_poverty_reduction_score \
         #     + social_security_poverty_reduction_score + medicare_medicaid_poverty_reduction_score + inflation_score
         rew[self.world.planner.idx] = (planner_rewards + other_planner_rewards) / (self.reward_normalization_factor) 
-        if self.world.timestep == 1 and self.world.use_real_world_policies: 
+        if self.csv_validation and  self.world.timestep == 1 and self.world.use_real_world_policies: 
             print("Real World Data Subsidy: ", np.sum(self.world.real_world_subsidy))
-        if self.world.timestep % 30 == 0 or self.world.timestep % 365 == 0 or self.world.timestep <= 29: # or self.world.timestep == 405 or self.world.timestep == 1:
+        if self.csv_validation and  (self.world.timestep % 30 == 0 or self.world.timestep % 365 == 0 or self.world.timestep <= 29): # or self.world.timestep == 405 or self.world.timestep == 1:
             print("\nThis timestep: ", self.world.timestep)
             print("\n------------------")
             print("Observations: ", list(self.world.global_state.keys()))

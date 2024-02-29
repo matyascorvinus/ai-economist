@@ -49,7 +49,7 @@ env_config_dict = {
 
     # Let the real-world state government handle the covid-19 restriction, and the federal government still operated by AI
     "state_governments_policies_only": True,
-    "us_government_spending_economic_multiplier": 1.3,
+    "us_government_spending_economic_multiplier": 2.05,
 
     # A factor indicating how much more the
     # states prioritize health (roughly speaking, loss of lives due to
@@ -94,7 +94,7 @@ env_config_dict = {
     "world_size": [1, 1],
     # Flag to collate all the agents' observations, rewards and done flags into a single matrix
     "collate_agent_step_and_reset_data": False,
-    "csv_file_path": "simulation-with-real-state-gov-and-ai-federal.csv"
+    "csv_file_path": "simulation-with-real-state-gov-and-ai-federal-2.05.csv"
 }
 from rllib.env_wrapper import RLlibEnvWrapper
 env_obj = RLlibEnvWrapper({"env_config_dict": env_config_dict})
@@ -177,7 +177,7 @@ trainer = PPOTrainer(
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-28_04-24-55l5kif0cf/checkpoint_25/checkpoint-25')
+trainer.restore('/home/ubuntu/ai-economist/ray_results/PPO_RLlibEnvWrapper_2024-02-28_15-00-20yw4qiddb/checkpoint_25/checkpoint-25')
 calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
 
 DATE_FORMAT = "%Y-%m-%d"
