@@ -136,7 +136,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         health_priority_scaling_agents=1,
         health_priority_scaling_planner=1,
         reward_normalization_factor=1, 
-        us_government_spending_economic_multiplier=2.05, # Fiscal multiplier - Average of 1.7 and 3.3 via tax cuts and spending increases - One paper stated that US Government spending only have 0.6 - 0.8 multiplier Fiscal multiplier - https://www.nber.org/system/files/working_papers/w15464/w15464.pdf
+        us_government_spending_economic_multiplier=1, # Fiscal multiplier - Average of 1.7 and 3.3 via tax cuts and spending increases - One paper stated that US Government spending only have 0.6 - 0.8 multiplier Fiscal multiplier - https://www.nber.org/system/files/working_papers/w15464/w15464.pdf
         us_government_mandatory_and_discretionary_spending = 4.4 * 10**12 / 365, 
         us_government_defense_spending = 676 * 10**9 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
         us_government_social_security_spending = 1.038 * 10**12 / 365, # https://www.cbo.gov/publication/56324 - 2019's number
@@ -1496,10 +1496,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     # Assume productivity after subsidy will be the indicator for GDP
                     # GDP_Growth = (np.sum(self.world.global_state["Postsubsidy Productivity"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365], axis=(0, 1)) - np.sum(self.maximum_productivity_t)) \
                     #         / np.sum(self.maximum_productivity_t)
-                    multiplier_spending_effect = -self.us_government_spending_economic_multiplier if fiscal_shock < 0 else -1
+                    self.us_government_spending_economic_multiplier = yt[1] / fiscal_shock
                     # GDP_Growth = 1 + self.average_GDP_growth - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
                     #     + fiscal_shock * multiplier_spending_effect
-                    GDP_Growth = 1 + yt[1] / 100
+                    GDP_Growth = 1 - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
+                        + yt[1] / 100
                     print("GDP Growth: ", GDP_Growth)
                     print("Reduced GDP Multiplier (1 year): ", 
                           np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
