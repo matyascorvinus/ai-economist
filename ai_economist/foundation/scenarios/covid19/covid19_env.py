@@ -1496,11 +1496,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     # Assume productivity after subsidy will be the indicator for GDP
                     # GDP_Growth = (np.sum(self.world.global_state["Postsubsidy Productivity"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365], axis=(0, 1)) - np.sum(self.maximum_productivity_t)) \
                     #         / np.sum(self.maximum_productivity_t)
-                    self.us_government_spending_economic_multiplier = yt[1] / fiscal_shock
+                    Real_GDP_Growth_from_model = 1 / self.world.global_state["US Treasury Yield Long Term"] - omeg
+                    print("Real_GDP_Growth_from_model: ", Real_GDP_Growth_from_model)
+                    self.us_government_spending_economic_multiplier = Real_GDP_Growth_from_model / fiscal_shock
                     # GDP_Growth = 1 + self.average_GDP_growth - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
                     #     + fiscal_shock * multiplier_spending_effect
                     GDP_Growth = 1 - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
-                        + yt[1] / 100
+                        + Real_GDP_Growth_from_model / 100
                     print("GDP Growth: ", GDP_Growth)
                     print("Reduced GDP Multiplier (1 year): ", 
                           np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
