@@ -1341,7 +1341,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     quantitative_amount = self.world.planner.state["Federal Reserve Balance Sheet"][-1]
                     federal_interest_payment = ((self.world.global_state["US Debt"] - quantitative_amount) * self.world.global_state["US Treasury Yield Long Term"] + quantitative_amount * self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] / 100) / 365
                 
-                self.world.global_state["US Federal Interest Payment"] = federal_interest_payment
+                self.world.global_state["US Federal Interest Payment"][self.world.timestep] = federal_interest_payment
                 self.world.global_state["US Federal Deficit"] = self.world.global_state["US Government Defense Spending"][self.world.timestep] \
                                                                 + self.world.global_state["US Government Social Security Spending"][self.world.timestep] \
                                                                 + self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] \
@@ -1396,11 +1396,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     # horizon of simulation is the episode length 
 
                     fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
+                    
+                    getFirstIndexForEveryYear = 365 * (theYearIndex - 1) + 1 if theYearIndex >= 1 else 1
                     total_deficit = self.world.global_state["US Debt"] - self.us_government_debt
                     self.us_government_debt = self.world.global_state["US Debt"]
                     shock_determinator = -1 if total_deficit > 0 else 1
-                    total_federal_interest_payment = self.world.global_state["US Federal Interest Payment"] if \
-                        self.world.global_state["US Federal Interest Payment"] > 0 else 0
+                    total_federal_interest_payment = np.sum(self.world.global_state["US Federal Interest Payment"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) if \
+                        np.sum(self.world.global_state["US Federal Interest Payment"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) > 0 else 0
                     fiscal_shock = shock_determinator * (np.abs(total_deficit) - np.abs(total_federal_interest_payment)) / self.world.global_state["US GDP"]
                     monetary_shock = -(self.world.global_state["Federal Reserve Balance Sheet"] - self.fed_reserve_balance_sheet) / self.world.global_state["US GDP"]
                     if(self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] != self.fed_fund_rates):
@@ -1414,8 +1416,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     fiscal_shock += fiscal_shock_from_previous_year
                     shock = [monetary_shock, fiscal_shock] # fiscal shock. 0.01 is 1% of GDP.
                     # print('monetary_shock', monetary_shock)
-                    # print('fiscal_shock', fiscal_shock)
-                    fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
+                    # print('fiscal_shock', fiscal_shock) 
 
                     b_s_guess = np.array([0, 1])
                     f = lambda b_s: self.parameterfun_s(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, 
@@ -1487,9 +1488,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
                     self.world.global_state["Inflation"] = self.world.global_state["Inflation"] + (pit[1] + pit_previous_years)
 
-                    self.world.global_state["Output Gap"] = (xt[1] + xt_previous_years)
-                    
-                    getFirstIndexForEveryYear = 365 * (theYearIndex - 1) + 1 if theYearIndex >= 1 else 1
+                    self.world.global_state["Output Gap"] = self.world.global_state["Output Gap"] + (xt[1] + xt_previous_years)
                     # Assume productivity after subsidy will be the indicator for GDP
                     # GDP_Growth = (np.sum(self.world.global_state["Postsubsidy Productivity"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365], axis=(0, 1)) - np.sum(self.maximum_productivity_t)) \
                     #         / np.sum(self.maximum_productivity_t)
@@ -1498,7 +1497,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     self.world.global_state["US GDP"] = current_real_potential_gdp * (1 + self.world.global_state["Output Gap"])
                     Real_GDP_Growth_from_model = self.world.global_state["US GDP"] / previous_GDP - 1 
                     print("Real_GDP_Growth_from_model: ", Real_GDP_Growth_from_model)
-                    self.us_government_spending_economic_multiplier = Real_GDP_Growth_from_model / fiscal_shock if int(fiscal_shock) != 0 else 0.95
+                    self.us_government_spending_economic_multiplier = Real_GDP_Growth_from_model / fiscal_shock if int(fiscal_shock) != 0 else self.us_government_spending_economic_multiplier
                     # GDP_Growth = 1 + self.average_GDP_growth - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
                     #     + fiscal_shock * multiplier_spending_effect
                     GDP_Growth = 1 - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
@@ -1952,7 +1951,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("Total Amount Subsidized (trillion $): ", np.sum(self.world.global_state["Subsidy"][1:], axis=(0, 1)) / 1e12) 
             print("US Tax Wedge: ", self.world.global_state["US Tax Wedge"])
             print("US Federal Deficit: ", (self.world.global_state["US Federal Deficit"]))
-            print("US Federal Interest Payment: ", self.world.global_state["US Federal Interest Payment"])
+            print("US Federal Interest Payment: ", np.sum(self.world.global_state["US Federal Interest Payment"][1:]))
             print("Federal Reserve Fund Rate: ", self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep])
             print("US Treasury Yield Long Term: ", self.world.global_state["US Treasury Yield Long Term"])
             print("US Government Revenue: ", np.sum(self.world.global_state["US Government Revenue"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
@@ -2005,7 +2004,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         "Total Subsidies (USD)": self.world.planner.state["Total Subsidy"],
                         "US Tax Wedge ('%' of GDP)": self.world.global_state["US Tax Wedge"] * 100,
                         "US Federal Deficit (USD)": np.sum(self.world.global_state["US Federal Deficit"]),
-                        "US Federal Interest Payment (USD)": self.world.global_state["US Federal Interest Payment"],
+                        "US Federal Interest Payment (USD)": np.sum(self.world.global_state["US Federal Interest Payment"][1:]),
                         "Federal Reserve Fund Rate (%)": self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep],
                         "US Treasury Yield Long Term (%)": self.world.global_state["US Treasury Yield Long Term"] * 100,
                         "US Government Revenue (USD)": np.sum(self.world.global_state["US Government Revenue"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]),
@@ -2061,7 +2060,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     "Total Subsidies (USD)": self.world.planner.state["Total Subsidy"],
                     "US Tax Wedge ('%' of GDP)": self.world.global_state["US Tax Wedge"],
                     "US Federal Deficit (USD)": (self.world.global_state["US Federal Deficit"]),
-                    "US Federal Interest Payment (USD)": self.world.global_state["US Federal Interest Payment"],
+                    "US Federal Interest Payment (USD)": np.sum(self.world.global_state["US Federal Interest Payment"][1:]) ,
                     "US Government Revenue (USD)": np.sum(self.world.global_state["US Government Revenue"]),
                     "Defense Imperialism Spending (USD)": np.sum(USDefenseSpending),
                     "Income Security Spending (USD)": np.sum(USIncomeSecurity),
@@ -2157,7 +2156,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                               dtype=self.np_float_dtype, planner=True) 
 
         self.set_global_state("US Federal Interest Payment", value=self.us_federal_net_interest,
-                                dtype=self.np_float_dtype, planner=True)
+                                dtype=self.np_float_dtype, planner=True, isArray=True)
         self.set_global_state("US Treasury Yield Long Term", value=self.us_treasury_yield_long_term, planner=True)
 
         self.set_global_state("US Government Defense Spending", value=self.us_government_defense_spending, dtype=self.np_float_dtype, 
