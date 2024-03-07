@@ -130,7 +130,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         pop_between_age_18_65=0.6,
         infection_too_sick_to_work_rate=0.1,
         risk_free_interest_rate=0.5/100,
-        fed_fund_rate_01_2020=1.75,
+        fed_fund_rate_01_2020=0.25,
         inflation_cpi_2019=0.017,
         economic_reward_crra_eta=2,
         health_priority_scaling_agents=1,
@@ -1365,11 +1365,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 # it = a + ρit−1 + bxt + cπt + uit
                 # st = a + ρst−1 + bxt + cπt + ust 
                 # c = 0.22
-                OUTPUT_GAP_CBO_2020_2030 = [-6.544903164, -4.243083199, -3.110728734, -2.791215879, -2.390089734, -1.917691323, -1.378409155, -0.843000579, -0.49877297, -0.450204275, -0.443190716]
-                REAL_POTENTIAL_GDP_2019_2030 = [
-                    21052, 21667,	22103,	22810,	23654,	24568,	25535,	26531,	27556,	28618,	29726,	30870,
-                ] 
-                lengthYearCount = len(REAL_POTENTIAL_GDP_2019_2030)
+                REAL_POTENTIAL_GDP_2020_2023 = [22168, 23088, 24043, 25015]
+                lengthYearCount = len(REAL_POTENTIAL_GDP_2020_2023)
                 theYearIndex = int(self.world.timestep / 365)
                 if self.world.timestep % 365 == 0 and self.world.timestep > 0 and self.world.timestep + 1 <= self.episode_length and theYearIndex <= lengthYearCount - 1: 
                     self.world.global_state["US Government Social Security Beneficiaries"] = \
@@ -1379,7 +1376,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     self.world.global_state["US Income Security Beneficiaries"] = \
                         self.world.global_state["US Income Security Beneficiaries"] + self.world.planner.state["Total Unemployed"]
 
-                    current_real_potential_gdp = REAL_POTENTIAL_GDP_2019_2030[theYearIndex] * 10**9
+                    current_real_potential_gdp = REAL_POTENTIAL_GDP_2020_2023[theYearIndex - 1] * 10**9
                     bet = 0.99 # 
                     omeg = 0.9 # 0.7 in draft, but larger illustrates long term debt effects better. maturity coeff
                     alph = 0.2 # 
@@ -1411,7 +1408,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     self.fed_reserve_balance_sheet = self.world.global_state["Federal Reserve Balance Sheet"]
                     self.fed_fund_rates = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]
                     H = 10 # horizon of simulation is the episode length - 10 years
-
+                    monetary_shock_from_previous_year = 0
+                    fiscal_shock_from_previous_year = 0
+                    monetary_shock += monetary_shock_from_previous_year
+                    fiscal_shock += fiscal_shock_from_previous_year
                     shock = [monetary_shock, fiscal_shock] # fiscal shock. 0.01 is 1% of GDP.
                     # print('monetary_shock', monetary_shock)
                     # print('fiscal_shock', fiscal_shock)
@@ -1451,37 +1451,43 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     pit_previous_years = 0
                     xt_previous_years = 0
                     autoregressive_coefficient = 0.7
+                    fiscal_shock_third_year_from_year_one = ust[3]
+                    monetary_shock_third_year_from_year_one = ust[3]
+                    if theYearIndex == 1:
+                        # element = (self.dictionary_fiscal_theory[0])
+                        # it_previous_years += element['it'][theYearIndex] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory))
+                        # yldt_previous_years += element['yldt'][theYearIndex] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory))
+                        # pit_previous_years += element['pit'][theYearIndex] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory))
+                        # xt_previous_years += element['xt'][theYearIndex] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory))
+                        fiscal_shock_from_previous_year += ust[2]
+                        monetary_shock_from_previous_year += uit[2]
                     if theYearIndex == 2:
-                        element = (self.dictionary_fiscal_theory[0])
-                        it_previous_years += element['it'][theYearIndex] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory))
-                        yldt_previous_years += element['yldt'][theYearIndex] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory))
-                        pit_previous_years += element['pit'][theYearIndex] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory))
-                        xt_previous_years += element['xt'][theYearIndex] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory))
-                    if theYearIndex == 3:
-                        element = (self.dictionary_fiscal_theory[1])
-                        prev_element = (self.dictionary_fiscal_theory[0])
-                        it_previous_years += element['it'][theYearIndex - 1] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory) - 1) + prev_element['it'][theYearIndex] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory))
-                        yldt_previous_years += element['yldt'][theYearIndex - 1] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory) - 1) + prev_element['yldt'][theYearIndex] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory))
-                        pit_previous_years += element['pit'][theYearIndex - 1] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory) - 1) + prev_element['pit'][theYearIndex] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory))
-                        xt_previous_years += element['xt'][theYearIndex - 1] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory) - 1) + prev_element['xt'][theYearIndex] * autoregressive_coefficient ** \
-                            (len(self.dictionary_fiscal_theory))
+                        fiscal_shock_from_previous_year += fiscal_shock_third_year_from_year_one
+                        monetary_shock_from_previous_year += monetary_shock_third_year_from_year_one
+                        # element = (self.dictionary_fiscal_theory[1])
+                        # prev_element = (self.dictionary_fiscal_theory[0])
+                        # it_previous_years += element['it'][theYearIndex - 1] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory) - 1) + prev_element['it'][theYearIndex] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory))
+                        # yldt_previous_years += element['yldt'][theYearIndex - 1] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory) - 1) + prev_element['yldt'][theYearIndex] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory))
+                        # pit_previous_years += element['pit'][theYearIndex - 1] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory) - 1) + prev_element['pit'][theYearIndex] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory))
+                        # xt_previous_years += element['xt'][theYearIndex - 1] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory) - 1) + prev_element['xt'][theYearIndex] * autoregressive_coefficient ** \
+                        #     (len(self.dictionary_fiscal_theory))
                     
                     self.world.global_state["US Treasury Yield Long Term"] = self.world.global_state["US Treasury Yield Long Term"] + (yldt[1] + yldt_previous_years)
 
                     self.world.global_state["Inflation"] = self.world.global_state["Inflation"] + (pit[1] + pit_previous_years)
 
-                    self.world.global_state["Output Gap"] = self.world.global_state["Output Gap"] + (xt[1] + xt_previous_years)
+                    self.world.global_state["Output Gap"] = (xt[1] + xt_previous_years)
                     
                     getFirstIndexForEveryYear = 365 * (theYearIndex - 1) + 1 if theYearIndex >= 1 else 1
                     # Assume productivity after subsidy will be the indicator for GDP
