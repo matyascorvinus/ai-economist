@@ -1493,14 +1493,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     # GDP_Growth = (np.sum(self.world.global_state["Postsubsidy Productivity"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365], axis=(0, 1)) - np.sum(self.maximum_productivity_t)) \
                     #         / np.sum(self.maximum_productivity_t)
 
-                    previous_GDP = self.world.global_state["US GDP"]
-                    self.world.global_state["US GDP"] = current_real_potential_gdp * (1 + self.world.global_state["Output Gap"])
-                    Real_GDP_Growth_from_model = self.world.global_state["US GDP"] / previous_GDP - 1 
+                    previous_GDP = self.world.global_state["US GDP"] 
+                    Real_GDP_Growth_from_model = current_real_potential_gdp * (1 + self.world.global_state["Output Gap"]) / previous_GDP - 1 
                     print("Real_GDP_Growth_from_model: ", Real_GDP_Growth_from_model)
                     self.us_government_spending_economic_multiplier = Real_GDP_Growth_from_model / fiscal_shock if int(fiscal_shock) != 0 else self.us_government_spending_economic_multiplier
                     # GDP_Growth = 1 + self.average_GDP_growth - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
                     #     + fiscal_shock * multiplier_spending_effect
-                    GDP_Growth = 1 - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
+                    GDP_Growth = 1 - (np.prod((1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365])) - 1) \
                         + Real_GDP_Growth_from_model
                     print("GDP Growth: ", GDP_Growth)
                     print("Reduced GDP Multiplier (1 year): ", 

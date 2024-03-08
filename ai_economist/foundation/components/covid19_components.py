@@ -61,7 +61,7 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
         *base_component_args,
         n_stringency_levels=10,
         action_cooldown_period=28,
-        reduced_gdp_multiplier=0.03,
+        reduced_gdp_multiplier_per_year=0.03,
         **base_component_kwargs,
     ):
 
@@ -70,7 +70,7 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
         self.np_int_dtype = np.int32
 
         self.n_stringency_levels = int(n_stringency_levels)
-        self.reduced_gdp_multiplier = float(reduced_gdp_multiplier)
+        self.reduced_gdp_multiplier_per_year = float(reduced_gdp_multiplier_per_year)
         assert self.n_stringency_levels >= 2
         self._checked_n_stringency_levels = False
 
@@ -138,10 +138,10 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
             name="action_cooldown_period",
             data=self.action_cooldown_period,
         )
-        # reduced_gdp_multiplier
+        # reduced_gdp_multiplier_per_year
         data_dict.add_data(
-            name="reduced_gdp_multiplier",
-            data=self.reduced_gdp_multiplier,
+            name="reduced_gdp_multiplier_per_year",
+            data=self.reduced_gdp_multiplier_per_year,
         )
 
         data_dict.add_data(
@@ -254,10 +254,12 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
                         ] += self.action_cooldown_period
             
             self.world.global_state["Average Stringency Level"] = np.mean(self.world.global_state["Stringency Level"][self.world.timestep])
+            
             # Reduced gdp multiplier is a number calculated from Stringency Level
+            self.reduced_gdp_multiplier_per_day = (1 + self.reduced_gdp_multiplier_per_year) ** (1 / 365) - 1
             self.world.global_state["Reduced GDP Multiplier"][self.world.timestep] = \
                 np.mean(self.world.global_state["Stringency Level"][self.world.timestep]
-                        * self.reduced_gdp_multiplier)
+                        * self.reduced_gdp_multiplier_per_day)
 
     def generate_observations(self):
 
