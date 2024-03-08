@@ -16,7 +16,7 @@ env_config_dict = {
             # The number of subsidy levels.
             "num_subsidy_quantitative_policy_level": 15,
             # The number of days over which the total subsidy amount is evenly rolled out.
-            "subsidy_quantitative_policy_interval": 15,
+            "subsidy_quantitative_policy_interval": 1,
             # The maximum annual subsidy that may be allocated per person.
             "max_annual_monetary_unit_per_person": 20000,
         }},
@@ -179,7 +179,7 @@ trainer = PPOTrainer(
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ai-economist/ray_results/PPO_RLlibEnvWrapper_2024-03-07_07-31-04l5sdvoqw/checkpoint_24/checkpoint-24')
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-03-08_12-44-205pv5invc/checkpoint_30/checkpoint-30')
 # env_config['evaluation_num_workers'] = 3
 # env_config['evaluation_interval'] = 1  # <-- HERE: must set this to > 0!
 # trainer._evaluate()
