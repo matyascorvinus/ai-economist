@@ -54,14 +54,14 @@ class ControlUSStateOpenCloseStatus(BaseComponent):
 
     # Covid-19 lockdown has effected the economy, so we need to add a reduction multiplier to the GDP
     # Assume at max level of stringency - level 10, the GDP is reduced by 30%, so each level increases 
-    # will increase the GDP reduction multiplier by 3%
+    # will increase the GDP reduction multiplier by 3%, or 0.03
 
     def __init__(
         self,
         *base_component_args,
         n_stringency_levels=10,
         action_cooldown_period=28,
-        reduced_gdp_multiplier_per_year=0.03,
+        reduced_gdp_multiplier_per_year=0.01,
         **base_component_kwargs,
     ):
 

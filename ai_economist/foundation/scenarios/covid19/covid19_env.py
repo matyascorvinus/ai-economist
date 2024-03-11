@@ -1305,66 +1305,29 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 # ---------
                 # Add federal government subsidy to productivity
                 daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
-                
-                # print(self.world.global_state["US Tax Wedge"])
-                # Subsidies via cutting Taxation
-                # if(curr_t > 1 and self.world.planner.state["Current Subsidy Quantitative Policy Level"] >= 40 and \
-                #     self.world.planner.state["Current Subsidy Quantitative Policy Level"] <= 50):
-                #     daily_statewise_subsidy_t += (self.world.global_state["US Tax Wedge"] - \
-                #         self.world.global_state["US Tax Wedge"]) * self.world.global_state["US GDP"] / 365
-                postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]) + \
+                ostsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]) + \
                                             daily_statewise_subsidy_t * \
                                                 self.us_government_spending_economic_multiplier
                 self.world.global_state["Postsubsidy Productivity"][
                     curr_t
                 ] = postsubsidy_productivity_t 
-    
-                    
-                # Federal Reserve Fund Rate
-
-                # Add indicator for default risk via Debt, Debt to GDP, Interest Rate, Deficit, Reserve Balance
-                # https://johnhcochrane.blogspot.com/2020/07/the-surplus-process.html
-                # \frac{B_{t-1}}{P_{t}}=b_{t}=E_{t}\sum_{j=0}^{\infty}\beta^{j}s_{t+j}.
-                #             b_t = B_t_minus_1 / P_t
-                #             discount_factor = 0.95  # assume beta = 0.95
-                #             expected_sum = 0.0
-                #
-                #             for j in range(0, infinity):
-                #               expected_sum += discount_factor ** j     * s_t_plus_j
-                #
-                #            b_t = expected_sum * b_t
-                # b_t is the expected discounted sum of future surpluses
-                # Calculate the primary surplus - which is s_t_plus_j - current primary surplus and
-                # the sum of the past primary surpluses and the discount_factor equals 1 / fed_fund_rate
                 federal_interest_payment = self.world.global_state["US Debt"] * self.world.global_state["US Treasury Yield Long Term"] / 365
                 if len(self.world.planner.state["Federal Reserve Balance Sheet"]) > 1 and self.world.planner.state["Federal Reserve Balance Sheet"][-1] != 0:
                     quantitative_amount = self.world.planner.state["Federal Reserve Balance Sheet"][-1]
                     federal_interest_payment = ((self.world.global_state["US Debt"] - quantitative_amount) * self.world.global_state["US Treasury Yield Long Term"] + quantitative_amount * self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] / 100) / 365
                 
                 self.world.global_state["US Federal Interest Payment"][self.world.timestep] = federal_interest_payment
-                self.world.global_state["US Federal Deficit"] = self.world.global_state["US Government Defense Spending"][self.world.timestep] \
+                deficit = self.world.global_state["US Government Defense Spending"][self.world.timestep] \
                                                                 + self.world.global_state["US Government Social Security Spending"][self.world.timestep] \
                                                                 + self.world.global_state["US Government Medicare Medicaid Spending"][self.world.timestep] \
                                                                 + self.world.global_state["US Government Income Security"][self.world.timestep] \
                                                                 + np.sum(daily_statewise_subsidy_t) + federal_interest_payment - federal_tax_revenue
+                self.world.global_state["US Federal Deficit"] += deficit
+                self.world.global_state["US Federal Surplus"] += (deficit - federal_interest_payment)
                 if self.world.timestep + 1 <= self.episode_length:
-                    self.world.global_state["US Debt"] += self.world.global_state["US Federal Deficit"]
+                    self.world.global_state["US Debt"] += deficit
                     if self.world.global_state["US Debt"] <= 0:
                         self.world.global_state["US Debt"] = 0
-    
-                # TODO: Later implement Federal Reserve
-                # if self.world.global_state["Inflation"] * 100 > 0.03:
-                #     self.world.global_state["Federal Reserve Fund Rate"][
-                #         self.world.timestep
-                #     ] = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep - 1] + 0.05 / 100
-
-                # [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(rho = rho, rhoi = rhoi, rhos = rhos)
-                # [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] = \
-                #     self.f_doir_final(self.episode_length, Nb, nb, N, Q, ze, Lb, 0 * t_ipi, 0 * t_ix, 0 * t_spi,  
-                #                       0 * t_sx, alph, omeg, b_s, b_i, shock, rho)
-                # it = a + ρit−1 + bxt + cπt + uit
-                # st = a + ρst−1 + bxt + cπt + ust 
-                # c = 0.22
                 REAL_POTENTIAL_GDP_2020_2023 = [22168, 23088, 24043, 25015]
                 lengthYearCount = len(REAL_POTENTIAL_GDP_2020_2023)
                 theYearIndex = int(self.world.timestep / 365)
@@ -1398,16 +1361,19 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
                     
                     getFirstIndexForEveryYear = 365 * (theYearIndex - 1) + 1 if theYearIndex >= 1 else 1
-                    total_deficit = self.world.global_state["US Debt"] - self.us_government_debt
-                    print("Total Deficit: ", total_deficit)
-                    print("Total Debt: ", self.world.global_state["US Debt"])
-                    self.us_government_debt = self.world.global_state["US Debt"]
-                    shock_determinator = -1 if total_deficit > 0 else 1
-                    total_federal_interest_payment = np.sum(self.world.global_state["US Federal Interest Payment"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) if \
-                        np.sum(self.world.global_state["US Federal Interest Payment"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) > 0 else 0
+                    # total_deficit = self.world.global_state["US Debt"] - self.us_government_debt
+                    # print("Total Deficit: ", total_deficit)
+                    # print("Total Debt: ", self.world.global_state["US Debt"])
+                    # self.us_government_debt = self.world.global_state["US Debt"]
+                    # shock_determinator = -1 if total_deficit > 0 else 1
+                    # total_federal_interest_payment = np.sum(self.world.global_state["US Federal Interest Payment"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) if \
+                    #     np.sum(self.world.global_state["US Federal Interest Payment"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) > 0 else 0
                     
-                    print("Total Interest Payment: ", np.abs(total_federal_interest_payment))
-                    fiscal_shock = shock_determinator * (np.abs(total_deficit) - np.abs(total_federal_interest_payment)) / self.world.global_state["US GDP"]
+                    # print("Total Interest Payment: ", np.abs(total_federal_interest_payment))
+                    # fiscal_shock = shock_determinator * (np.abs(total_deficit) - np.abs(total_federal_interest_payment)) / self.world.global_state["US GDP"]
+                    previousYearSurplus = 0
+                    shock_determinator = -1 if self.world.global_state["US Federal Surplus"] > 0 else 1
+                    fiscal_shock = shock_determinator * (self.world.global_state["US Federal Surplus"] - previousYearSurplus) / self.world.global_state["US GDP"]
                     monetary_shock = -(self.world.global_state["Federal Reserve Balance Sheet"] - self.fed_reserve_balance_sheet) / self.world.global_state["US GDP"]
                     if(self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] != self.fed_fund_rates):
                         monetary_shock += (self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] - self.fed_fund_rates) / 1 * (self.interest_hikes_shock_gdp / 100)
@@ -1460,57 +1426,28 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     fiscal_shock_third_year_from_year_one = ust[3]
                     monetary_shock_third_year_from_year_one = ust[3]
                     if theYearIndex == 1:
-                        # element = (self.dictionary_fiscal_theory[0])
-                        # it_previous_years += element['it'][theYearIndex] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory))
-                        # yldt_previous_years += element['yldt'][theYearIndex] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory))
-                        # pit_previous_years += element['pit'][theYearIndex] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory))
-                        # xt_previous_years += element['xt'][theYearIndex] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory))
+                        previousYearSurplus = self.world.global_state["US Federal Surplus"]
                         fiscal_shock_from_previous_year += ust[2]
                         monetary_shock_from_previous_year += uit[2]
                     if theYearIndex == 2:
+                        previousYearSurplus = self.world.global_state["US Federal Surplus"]
                         fiscal_shock_from_previous_year += fiscal_shock_third_year_from_year_one
                         monetary_shock_from_previous_year += monetary_shock_third_year_from_year_one
-                        # element = (self.dictionary_fiscal_theory[1])
-                        # prev_element = (self.dictionary_fiscal_theory[0])
-                        # it_previous_years += element['it'][theYearIndex - 1] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory) - 1) + prev_element['it'][theYearIndex] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory))
-                        # yldt_previous_years += element['yldt'][theYearIndex - 1] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory) - 1) + prev_element['yldt'][theYearIndex] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory))
-                        # pit_previous_years += element['pit'][theYearIndex - 1] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory) - 1) + prev_element['pit'][theYearIndex] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory))
-                        # xt_previous_years += element['xt'][theYearIndex - 1] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory) - 1) + prev_element['xt'][theYearIndex] * autoregressive_coefficient ** \
-                        #     (len(self.dictionary_fiscal_theory))
                     
                     self.world.global_state["US Treasury Yield Long Term"] = self.world.global_state["US Treasury Yield Long Term"] + (yldt[1] + yldt_previous_years)
 
                     self.world.global_state["Inflation"] = self.world.global_state["Inflation"] + (pit[1] + pit_previous_years)
 
-                    self.world.global_state["Output Gap"] = xt[1]
-                    # Assume productivity after subsidy will be the indicator for GDP
-                    # GDP_Growth = (np.sum(self.world.global_state["Postsubsidy Productivity"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365], axis=(0, 1)) - np.sum(self.maximum_productivity_t)) \
-                    #         / np.sum(self.maximum_productivity_t)
-
+                    self.world.global_state["Output Gap"] = xt[1] 
                     previous_GDP = self.world.global_state["US GDP"] 
                     Real_GDP_Growth_from_model = current_real_potential_gdp * (1 + self.world.global_state["Output Gap"]) / previous_GDP - 1 
                     print("Real_GDP_Growth_from_model: ", Real_GDP_Growth_from_model)
                     self.us_government_spending_economic_multiplier = Real_GDP_Growth_from_model / fiscal_shock if int(fiscal_shock) != 0 else self.us_government_spending_economic_multiplier
-                    # GDP_Growth = 1 + self.average_GDP_growth - np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) \
-                    #     + fiscal_shock * multiplier_spending_effect
                     print("Reduced GDP per day: ", np.average(1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
                     print("Reduced GDP: ", (np.prod((1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365])) - 1))
                     GDP_Growth = 1 - (np.prod((1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365])) - 1) \
                         + Real_GDP_Growth_from_model
                     print("GDP Growth: ", GDP_Growth)
-                    print("Reduced GDP Multiplier (1 year): ", 
-                          np.average(self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
                     print("Fiscal Shock: ", fiscal_shock)
                     print("Monetary Shock: ", monetary_shock)
                     print("End This timestep: ", self.world.timestep)
@@ -2010,7 +1947,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         "Current Subsidy Quantitative Policy Level": self.world.planner.state["Current Subsidy Quantitative Policy Level"],
                         "Total Subsidies (USD)": self.world.planner.state["Total Subsidy"],
                         "US Tax Wedge ('%' of GDP)": self.world.global_state["US Tax Wedge"] * 100,
-                        "US Federal Deficit (USD)": np.sum(self.world.global_state["US Federal Deficit"]),
+                        "US Federal Deficit (USD)": (self.world.global_state["US Federal Deficit"]),
                         "US Federal Interest Payment (USD)": np.sum(self.world.global_state["US Federal Interest Payment"][1:]),
                         "Federal Reserve Fund Rate (%)": self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep],
                         "US Treasury Yield Long Term (%)": self.world.global_state["US Treasury Yield Long Term"] * 100,
@@ -2182,6 +2119,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                                 dtype=self.np_int_dtype, planner=True)
         
         self.set_global_state("US Federal Deficit", value=self.us_federal_deficit,
+                              dtype=self.np_float_dtype, planner=True)
+        self.set_global_state("US Federal Surplus", value=0.0,
                               dtype=self.np_float_dtype, planner=True)
         
         self.set_global_state("Social Security Poverty Reduction", value=self.social_security_poverty_reduction,
