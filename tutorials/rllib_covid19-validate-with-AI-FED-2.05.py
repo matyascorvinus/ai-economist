@@ -177,7 +177,10 @@ trainer = PPOTrainer(
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ai-economist/ray_results/PPO_RLlibEnvWrapper_2024-02-28_15-00-20yw4qiddb/checkpoint_25/checkpoint-25')
+# trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-03-08_22-02-488zq1owj0/checkpoint_20/checkpoint-20')
+# trainer.restore('/home/ubuntu/ai-economist/ray_results/PPO_RLlibEnvWrapper_2024-03-12_02-57-31qqvsjcj2/checkpoint_17/checkpoint-17')
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-03-12_05-49-125oyhk0_7/checkpoint_20/checkpoint-20')
+
 calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
 
 DATE_FORMAT = "%Y-%m-%d"
