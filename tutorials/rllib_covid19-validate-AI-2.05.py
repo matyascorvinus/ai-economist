@@ -179,7 +179,7 @@ trainer = PPOTrainer(
     
 # checkpoint_path = trainer.save()
 # print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-03-05_03-47-35tof0gu_h/checkpoint_30/checkpoint-30')
+trainer.restore('/home/ubuntu/ai-economist/ray_results/PPO_RLlibEnvWrapper_2024-03-12_02-57-31qqvsjcj2/checkpoint_15/checkpoint-15')
 # env_config['evaluation_num_workers'] = 3
 # env_config['evaluation_interval'] = 1  # <-- HERE: must set this to > 0!
 # trainer._evaluate()

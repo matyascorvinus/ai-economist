@@ -1102,7 +1102,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 _D_t = np.maximum(
                     self._real_world_data["deaths"][curr_t + self.start_date_index],
                     0,
-                )
+                ) 
 
             else:  # Use simulation logic
                 if curr_t - self.beta_delay < 0:
@@ -1172,35 +1172,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 )
 
             self.world.global_state["Unemployed"][curr_t] = num_unemployed_t
-            # Fiscal Multiplier : https://www.crfb.org/papers/comparing-fiscal-multipliers
-
-            # So basically QE is a way to manage government debt
-
-            # Demonstrate that with higher Debt to GDP will lead to slo wer growth
-
-            # A better way to understand QE is to view it as debt management, overriding the Treasury. The Treasury would issue a mix of long-term debt and short-term debt.
-            # By buying the long-term debt and financing it with short-term borrowing, the Fed was converting the Treasury’s long-term debt into short-term debt.
-            #         Sure, let's break down this process:
-            #           1. Issuance of Debt by the Treasury: The U.S. Treasury issues both short-term and long-term debt to finance government operations.
-            #           Short-term debt typically comes in the form of Treasury bills (T-bills) with maturities of one year or less, while long-term debt includes
-            #           Treasury notes and bonds with maturities ranging from 2 to 30 years.
-
-            #           2. Purchase of Long-Term Debt by the Fed: As part of its Quantitative Easing (QE) program,
-            #           the Federal Reserve buys long-term Treasury bonds on the open market. This increases the demand for those bonds, which pushes up their prices and
-            #           lowers their yields (interest rates).
-
-            #           3. Financing the Purchase with Short-Term Borrowing: The Fed doesn't use its own money to buy these bonds.
-            #           Instead, it essentially creates new money by crediting the reserve accounts of the banks from which it buys the bonds.
-            #           These reserves are effectively short-term liabilities of the Fed, because banks can demand payment for them at any time.
-
-            #           4. Effect on the Composition of Government Debt: By buying long-term bonds and financing them with short-term liabilities,
-            #           the Fed is effectively converting long-term government debt into short-term debt. From the perspective of the rest of the economy, instead of holding long-term Treasury bonds, they now hold short-term claims on the Fed (in the form of bank reserves).
-            #
-            #         This process can influence interest rates across the yield curve and affect the economy in various ways.
-            #         For example, by lowering long-term interest rates, QE can stimulate economic activity by making it cheaper for businesses and households to borrow and invest.
-            #         On the other hand, by increasing the amount of short-term liabilities,
-            #         it can also increase the sensitivity of the government's fiscal position to changes in short-term interest rates.
-
+            # Fiscal Multiplier : https://www.crfb.org/papers/comparing-fiscal-multipliers 
             # Productivity
             # ------------  
             productivity_t = self.economy_step(
@@ -1232,7 +1204,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 if(self.world.timestep / 365 == 1 and self.world.timestep % 365 == 0):
                     self.world.global_state["US Government Revenue"][self.world.timestep] = self.revenue_2021 / 365
                     self.world.global_state["US Federal Deficit"] = self.spending_2021 / 365
-                    
+                    self.world.global_state["US Tax Wedge"] = self.revenue_2021 / self.gdp_2021
                     self.world.global_state["US Government Defense Spending"][self.world.timestep] \
                         = self.defense_spending_2021 / 365
                     
@@ -1249,6 +1221,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     self.world.global_state["US Government Revenue"][self.world.timestep] = self.revenue_2022 / 365
                     self.world.global_state["US Federal Deficit"] = self.spending_2022 / 365
                     
+                    self.world.global_state["US Tax Wedge"] = self.revenue_2022 / self.gdp_2022
                     self.world.global_state["US Government Defense Spending"][self.world.timestep] \
                         = self.defense_spending_2022 / 365
                     
@@ -1305,7 +1278,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 # ---------
                 # Add federal government subsidy to productivity
                 daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
-                ostsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]) + \
+                postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]) + \
                                             daily_statewise_subsidy_t * \
                                                 self.us_government_spending_economic_multiplier
                 self.world.global_state["Postsubsidy Productivity"][
@@ -1729,7 +1702,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Economic index -- fraction of annual GDP achieved
         # Use a "crra" nonlinearity on the agent economic reward
         marginal_agent_economic_index = crra_nonlinearity(
-            postsubsidy_productivity_t / self.agents_economic_norm,
+            postsubsidy_productivity_t * (1 - US_Inflation) / self.agents_economic_norm,
             self.economic_reward_crra_eta,
         ).astype(self.np_float_dtype)
 
@@ -1771,16 +1744,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             -np.sum(marginal_deaths).astype(self.np_float_dtype)
             * self.value_of_life
             / self.planner_health_norm
-        ) 
+        )
+
+        
         cost_of_subsidy_t = 0
         if (self.world.timestep > 0):
             cost_of_subsidy_t = (1 + self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]) *\
                                 np.sum(quantitative_t) + (np.sum(subsidy_t) - np.sum(quantitative_t)) * \
                                 (1 + self.world.global_state["US Treasury Yield Long Term"]) + (self.world.global_state["US GDP"] * self.world.global_state["US Tax Wedge"] / 365) * 0.1
-                                # - (np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep])
-                                # - np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep - 1])) + \
-                                
-        
         us_defense_spending_2019 = self.us_government_defense_spending * 365 
         us_imperialism_level_score = 0
         income_security_poverty_reduction_score = 0
@@ -1900,8 +1871,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("Reward Other Reward Score: ", other_planner_rewards)
             print("------------------\n")
             if self.csv_validation and self.world.timestep % 365 != 0 and self.world.timestep >= 30:
-
-                print(f"Simulation data saved to {self.csv_file_path}")
                 if(os.path.exists(self.csv_file_path) and os.path.isfile(self.csv_file_path)) and self.delete_csv_file: 
                     os.remove(self.csv_file_path) 
                 self.delete_csv_file = False
@@ -1956,7 +1925,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         
         # Days
         if self.csv_validation:
-            print(f"Simulation data saved to {self.csv_file_path_day}")
             if(os.path.exists(self.csv_file_path_day) and os.path.isfile(self.csv_file_path_day)) and self.delete_csv_day_file: 
                 os.remove(self.csv_file_path_day) 
             self.delete_csv_day_file = False
@@ -2007,8 +1975,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 
                 # Write the data for this timestep or run
                 writer.writerow(data)
-
-
     
         return rew
 

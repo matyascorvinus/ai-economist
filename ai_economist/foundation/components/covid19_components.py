@@ -814,12 +814,12 @@ class VaccinationCampaign(BaseComponent):
             if (self.world.timestep % self.delivery_interval) != 0:
                 return
             # Deliver vaccines to each state
-            total_vaccine = 0
-            for aidx, agent in enumerate(self.world.agents):  
-                total_vaccine += agent.state["Total Vaccinated"]
+            # total_vaccine = 0
+            # for aidx, agent in enumerate(self.world.agents):  
+            #     total_vaccine += agent.state["Total Vaccinated"]
             # US can only get 68% of their population to get the vaccine
-            if total_vaccine / self.world.us_population * 100 > 68:
-                return 
+            # if total_vaccine / self.world.us_population * 100 > 68:
+            #     return 
             for aidx, vaccines in enumerate(self.num_vaccines_per_delivery):
                 self.world.agents[aidx].state["Vaccines Available"] += vaccines
 

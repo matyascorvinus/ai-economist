@@ -168,8 +168,8 @@ trainer = PPOTrainer(
 # self.us_federal_deficit:  2465753424.6575336
 # self.us_government_revenue:  9589041095.890411
 # self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
-NUM_ITERS = 15
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-28_15-00-20yw4qiddb/checkpoint_25/checkpoint-25')
+NUM_ITERS = 20
+# trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-28_15-00-20yw4qiddb/checkpoint_25/checkpoint-25')
 for iteration in range(NUM_ITERS):
     print(f'********** Iter : {iteration} **********')
     result = trainer.train()
