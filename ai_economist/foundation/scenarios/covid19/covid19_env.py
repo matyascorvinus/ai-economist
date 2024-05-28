@@ -1355,22 +1355,15 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     t_sx = 1
                     t_spi = 0.25
                     b_i = 0
-                    b_s= 0 # initialize so functions have an argument. Should not be used before defined. 
+                    b_s= 0 
+                    # initialize so functions have an argument. Should not be used before defined. 
+                    policy_rules = 1
                     # horizon of simulation is the episode length 
 
                     fraction_inflated = 0.4 # ratio of sum omega^j pi_j to sum rho^j u_j in fiscal shock. determines b_s
                     
                     getFirstIndexForEveryYear = 365 * (theYearIndex - 1) + 1 if theYearIndex >= 1 else 1
-                    # total_deficit = self.world.global_state["US Debt"] - self.us_government_debt
-                    # print("Total Deficit: ", total_deficit)
-                    # print("Total Debt: ", self.world.global_state["US Debt"])
-                    # self.us_government_debt = self.world.global_state["US Debt"]
-                    # shock_determinator = -1 if total_deficit > 0 else 1
-                    # total_federal_interest_payment = np.sum(self.world.global_state["US Federal Interest Payment"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) if \
-                    #     np.sum(self.world.global_state["US Federal Interest Payment"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) > 0 else 0
                     
-                    # print("Total Interest Payment: ", np.abs(total_federal_interest_payment))
-                    # fiscal_shock = shock_determinator * (np.abs(total_deficit) - np.abs(total_federal_interest_payment)) / self.world.global_state["US GDP"]
                     previousYearSurplus = 0
                     shock_determinator = -1 if self.world.global_state["US Federal Surplus"] > 0 else 1
                     fiscal_shock = shock_determinator * (self.world.global_state["US Federal Surplus"] - previousYearSurplus) / self.world.global_state["US GDP"]
@@ -1388,24 +1381,29 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     print("This timestep: ", self.world.timestep)
                     print('monetary_shock: ', monetary_shock)
                     print('fiscal_shock: ', fiscal_shock) 
-
-                    b_s_guess = np.array([0, 1])
-                    f = lambda b_s: self.parameterfun_s(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, 
-                                                b_i, b_s, H, t_spi, t_sx, alph, [0, shock[1]], fraction_inflated)
-                    # passive policies for both monetary and fiscal, cause the AI will be the one decides these policies
-                    f_i = lambda b_i: self.parameterfun(sig, kap, bet, omeg, rho, 0 * t_ix, 0 * t_ipi, rhoi, rhos, b_i, 0, H, t_spi, t_sx, alph, 
-                                                [shock[0], 0],)
-                    b_s, info, ier, msg = fsolve(f, b_s_guess, full_output=True)
-                    b_s = np.mean(b_s) 
-                    if np.abs(fiscal_shock) == 0:
+                    if policy_rules == 0: 
+                        t_ix = 0
+                        t_ipi = 0
                         b_s = 0
-                    
-                    b_i, info, ier, msg = fsolve(f_i, b_s_guess, full_output=True)
-                    b_i = np.mean(b_i)
-                    if np.abs(monetary_shock) == 0:
                         b_i = 0
+                    if policy_rules == 1:
+                        b_s_guess = np.array([0, 1])
+                        f = lambda b_s: self.parameterfun_s(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, 
+                                                    b_i, b_s, H, t_spi, t_sx, alph, [0, shock[1]], fraction_inflated)
+                        # passive policies for both monetary and fiscal, cause the AI will be the one decides these policies
+                        f_i = lambda b_i: self.parameterfun(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, 0, H, t_spi, t_sx, alph, 
+                                                    [shock[0], 0],)
+                        b_s, info, ier, msg = fsolve(f, b_s_guess, full_output=True)
+                        b_s = np.mean(b_s) 
+                        if np.abs(fiscal_shock) == 0:
+                            b_s = 0
+                        
+                        b_i, info, ier, msg = fsolve(f_i, b_s_guess, full_output=True)
+                        b_i = np.mean(b_i)
+                        if np.abs(monetary_shock) == 0:
+                            b_i = 0
                     # b_s = 0.1368
-                    [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(sig,kap,bet,omeg,rho,t_ix,t_ipi,rhoi,rhos,b_i,b_s)
+                    [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s)
                     # print('N\n', N, '\nNb\n', Nb,'\nnb\n', nb, '\nQ\n', Q, '\nze\n', ze, '\nLb\n', Lb) 
                     [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] =\
                     self.f_doir_final(H , Nb, nb, N, Q, ze, Lb, t_ipi , t_ix , t_spi, t_sx, alph ,omeg , b_s , b_i , shock, rho); 
@@ -1773,34 +1771,15 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             -np.sum(marginal_deaths).astype(self.np_float_dtype)
             * self.value_of_life
             / self.planner_health_norm
-        )
-
-        # # With 42% Debt to GDP, the income will growth around 1.46% per year,
-        # # With 219% Debt to GDP, the income will growth around 1.09% per year,
-        # # With the current 100% Debt to GDP, what is the income growth rate?
-        # resulting_income_growth_rate = 1.09 + (1.46 - 1.09) * \
-        #     (self.world.global_state["US Debt"]/self.world.global_state["US GDP"] * 100 - 219) / (42 - 219)
-            
-        # slow_growth_rate = 1.46 - resulting_income_growth_rate;
-        
-        # Taxation increase = additional 10% loss of tax income 
-        # Social Spending cut = increasing inequality and social unrest
-        # Defense spending cut = lower security
-        # Health spending cut = lower health care
-        # Tax cut = GDP Multiplier of above 2
-        # Government debt burden and inflation - inflation should be lower than 1%
-
-        # Social Security continued to be the most important antipoverty program in 2022, moving 28.9 million people out of SPM poverty. 
-        # Meanwhile, refundable tax credits moved 6.4 million out of SPM poverty, down from 9.6 million people in 2021
-        # Economic index -- fraction of annual GDP achieved (minus subsidy cost)
+        ) 
         cost_of_subsidy_t = 0
         if (self.world.timestep > 0):
             cost_of_subsidy_t = (1 + self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]) *\
                                 np.sum(quantitative_t) + (np.sum(subsidy_t) - np.sum(quantitative_t)) * \
-                                (1 + self.world.global_state["US Treasury Yield Long Term"]) - \
-                                (np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep])
-                                 - np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep - 1])) + \
-                                (self.world.global_state["US GDP"] * self.world.global_state["US Tax Wedge"] / 365) * 0.1
+                                (1 + self.world.global_state["US Treasury Yield Long Term"]) + (self.world.global_state["US GDP"] * self.world.global_state["US Tax Wedge"] / 365) * 0.1
+                                # - (np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep])
+                                # - np.sum(self.world.global_state["Postsubsidy Productivity"][self.world.timestep - 1])) + \
+                                
         
         us_defense_spending_2019 = self.us_government_defense_spending * 365 
         us_imperialism_level_score = 0
