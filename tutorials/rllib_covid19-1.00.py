@@ -1,4 +1,7 @@
 
+import datetime
+now = datetime.datetime.now()
+name_file = 'simulation_results-AI_' + str(now).replace(':', '-').replace(' ', '_') +  '.csv'
 path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-29"
 env_config_dict = {
     # Scenario name - determines which scenario class to use
@@ -165,24 +168,29 @@ trainer = PPOTrainer(
 # self.us_federal_deficit:  2465753424.6575336
 # self.us_government_revenue:  9589041095.890411
 # self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
-NUM_ITERS = 25
-# trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-03-07_15-53-28lbkwtggn/checkpoint_13/checkpoint-13')
+NUM_ITERS = 20
 checkpoint_path = ''
+checkpoint_list = []
 for iteration in range(NUM_ITERS):
     print(f'********** Iter : {iteration} **********')
     result = trainer.train()
     print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
     print(f'''episode_reward_max: {result.get('episode_reward_max')}''')
     checkpoint_path = trainer.save()
+    checkpoint_list.append({
+        'path': checkpoint_path, 
+        'episode_reward_max': result.get('episode_reward_max'), 
+        'episode_reward_mean': result.get('episode_reward_mean'), 
+    })
     print("Model checkpoint saved at:", checkpoint_path)
-    
-# checkpoint_path = trainer.save()
-# print("Model checkpoint saved at:", checkpoint_path)
-# trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-02_07-11-5173tn6fis/checkpoint_85/checkpoint-85')
-# result = trainer.train()
-# print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
-    
 
+max_reward = max(checkpoint_list, key=lambda x: x['episode_reward_mean'])
+
+print("Path:", max_reward['path'])
+print("Max Episode Reward:", max_reward['episode_reward_max'])
+print("Mean Episode Reward:", max_reward['episode_reward_mean'])
+
+checkpoint_path = checkpoint_path if (max_reward is None or max_reward['path'] is None) else max_reward['path']
 
 import ai_economist
 env_config_dict = {
@@ -277,7 +285,7 @@ env_config_dict = {
     "world_size": [1, 1],
     # Flag to collate all the agents' observations, rewards and done flags into a single matrix
     "collate_agent_step_and_reset_data": False,
-    "csv_file_path": "simulation_results-AI.csv"
+    "csv_file_path": name_file
 } 
 trainer.restore(checkpoint_path)
 calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)

@@ -164,27 +164,7 @@ trainer = PPOTrainer(
  
 )
 
-# Number of US states: 51
-# self.us_gdp_2019:  21466585914800.0
-# self.us_federal_deficit:  2465753424.6575336
-# self.us_government_revenue:  9589041095.890411
-# self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
-# NUM_ITERS = 65
-# for iteration in range(NUM_ITERS):
-#     print(f'********** Iter : {iteration} **********')
-#     result = trainer.train()
-#     print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
-#     checkpoint_path = trainer.save()
-#     print("Model checkpoint saved at:", checkpoint_path)
-    
-# checkpoint_path = trainer.save()
-# print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ai-economist/ray_results/PPO_RLlibEnvWrapper_2024-03-13_03-26-00udrsav8p/checkpoint_20/checkpoint-20')
-# env_config['evaluation_num_workers'] = 3
-# env_config['evaluation_interval'] = 1  # <-- HERE: must set this to > 0!
-# trainer._evaluate()
-
-# trainer.train()
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-05-29_15-45-31lar47jm9/checkpoint_20/checkpoint-20')
 calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
 
 DATE_FORMAT = "%Y-%m-%d"

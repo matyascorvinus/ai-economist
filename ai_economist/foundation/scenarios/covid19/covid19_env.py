@@ -23,9 +23,9 @@ headers = [
     "Month", "Susceptibles", "Infected", "Recovered", "Vaccinated (% of population)", "Deaths (thousands)" ,"Mean Unemployment Rate (%)","US Debt (USD)", "US GDP (USD)", 
     "Post-productivity (trillion $)", "Current Subsidy Quantitative Policy Level",
     "Total Subsidies (USD)", "US Tax Wedge ('%' of GDP)", "US Federal Deficit (USD)", "US Federal Interest Payment (USD)", "Federal Reserve Fund Rate (%)", "US Treasury Yield Long Term (%)",
-    "US Government Revenue (USD)", "US Health Index", "Defense Imperialism Spending (USD)", "Income Security Spending (USD)",
+    "US Government Revenue (USD)", "US Health Index", "Defense Spending (USD)", "Income Security Spending (USD)",
     "Social Security Spending (USD)", "Medicare Medicaid Spending (USD)", "Federal Reserve Balance Sheet (USD)", "Inflation", "US Treasury Yield",
-    "Defense Imperialism Index", "Income Security Index", "Social Security Index", "Medicare Medicaid Index",
+    "Defense Index", "Income Security Index", "Social Security Index", "Medicare Medicaid Index",
     "Inflation Index", "US Treasury Yield Index", "Health Index", "Economic Index", "Reward", "Reward Social Welfare"
 ]
 
@@ -33,7 +33,7 @@ headers_day = [
     "Day", "Susceptibles", "Infected", "Recovered", "Vaccinated (% of population)", "Deaths (thousands)" ,"Mean Unemployment Rate (%)","US Debt (USD)", "US GDP (USD)", 
     "Post-productivity (trillion $)", "Current Subsidy Quantitative Policy Level",
     "Total Subsidies (USD)", "US Tax Wedge ('%' of GDP)", "US Federal Deficit (USD)", "US Federal Interest Payment (USD)",
-    "US Government Revenue (USD)", "Defense Imperialism Spending (USD)", "Income Security Spending (USD)",
+    "US Government Revenue (USD)", "Defense Spending (USD)", "Income Security Spending (USD)",
     "Social Security Spending (USD)", "Medicare Medicaid Spending (USD)", "Federal Reserve Balance Sheet (USD)", "Federal Reserve Fund Rate (%)", "Inflation", "US Treasury Yield Long Term (%)",
     "Defense Index", "Income Security Index", "Social Security Index", "Medicare Medicaid Index",
     "Inflation Index", "US Treasury Yield Index", "Health Index", "Economic Index", "Reward", "Reward Social Welfare"
@@ -464,7 +464,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.max_us_imperialism_level = max_us_imperialism_level
         self.max_us_imperialism_level_spending_required = max_us_imperialism_level_spending_required
         self.ideal_inflation = ideal_inflation
-
+        # self.yldt_previous_years = []
+        # self.pit_previous_years = []
+        # self.pit_previous_years.append(self.inflation_cpi_2019)
+        # self.yldt_previous_years.append(self.us_treasury_yield_long_term)
         # Compute each worker's daily productivity when at work (to match 2019 GDP)
         # We assume the open/close stringency policy level was always at it's lowest
         # value (i.e., 1) before the pandemic started.
@@ -1304,7 +1307,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 REAL_POTENTIAL_GDP_2020_2023 = [22168, 23088, 24043, 25015]
                 lengthYearCount = len(REAL_POTENTIAL_GDP_2020_2023)
                 theYearIndex = int(self.world.timestep / 365)
-                if self.world.timestep % 365 == 0 and self.world.timestep > 0 and self.world.timestep + 1 <= self.episode_length and theYearIndex <= lengthYearCount - 1: 
+                theQuarter = 120
+                if self.world.timestep % 120 == 0 and self.world.timestep > 0 and self.world.timestep + 1 <= self.episode_length and theYearIndex <= lengthYearCount - 1: 
                     self.world.global_state["US Government Social Security Beneficiaries"] = \
                         self.world.global_state["US Government Social Security Beneficiaries"] + self.social_security_beneficiaries_growth
                     self.world.global_state["US Medicare Medicaid Beneficiaries"] = \
@@ -1354,6 +1358,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     print("This timestep: ", self.world.timestep)
                     print('monetary_shock: ', monetary_shock)
                     print('fiscal_shock: ', fiscal_shock) 
+                    quarterCount = self.world.timestep / 120
                     if policy_rules == 0: 
                         t_ix = 0
                         t_ipi = 0
@@ -1389,11 +1394,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     print("Inflation shock: ", pit[1])
                     print("Yield: ", yldt[1])
                     print("Federal Reserve Fund Rate: ", it[1])
-                    it_previous_years = 0
-                    yldt_previous_years = 0
-                    pit_previous_years = 0
-                    xt_previous_years = 0
-                    autoregressive_coefficient = 0.7
+                    gamma = 0.7
+                    
                     fiscal_shock_third_year_from_year_one = ust[3]
                     monetary_shock_third_year_from_year_one = ust[3]
                     if theYearIndex == 1:
@@ -1404,27 +1406,49 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         previousYearSurplus = self.world.global_state["US Federal Surplus"]
                         fiscal_shock_from_previous_year += fiscal_shock_third_year_from_year_one
                         monetary_shock_from_previous_year += monetary_shock_third_year_from_year_one
+                    # total_yield = sum(value * gamma**(index + 1) for index, value in enumerate(reversed(self.yldt_previous_years)))
+                    it_previous_years = 0
+                    yldt_previous_years = 0
+                    pit_previous_years = 0
+                    xt_previous_years = 0
+                    if len(self.dictionary_fiscal_theory) > 1:
+                        for index, element in enumerate(self.dictionary_fiscal_theory):
+                            it_previous_years += element['it'][int(quarterCount - index)] / 4 * gamma ** \
+                                (len(self.dictionary_fiscal_theory) - index)
+                            yldt_previous_years += element['yldt'][int(quarterCount - index)] / 4 * gamma ** \
+                                (len(self.dictionary_fiscal_theory) - index)
+                            pit_previous_years += element['pit'][int(quarterCount - index)] / 4 * gamma ** \
+                                (len(self.dictionary_fiscal_theory) - index)
+                            xt_previous_years += element['xt'][int(quarterCount - index)] / 4 * gamma ** \
+                                (len(self.dictionary_fiscal_theory) - index)
                     
-                    self.world.global_state["US Treasury Yield Long Term"] = self.world.global_state["US Treasury Yield Long Term"] + (yldt[1] + yldt_previous_years)
+                    self.world.global_state["US Treasury Yield Long Term"] = (yldt[1] + yldt_previous_years)
+                    # self.yldt_previous_years.append(yldt[1])
+                    # self.yldt_previous_years.append(yldt[2])
+                    # self.yldt_previous_years.append(yldt[3])
 
-                    self.world.global_state["Inflation"] = self.world.global_state["Inflation"] + (pit[1] + pit_previous_years)
+                    # total_inflation = sum(value * gamma**(index + 1) for index, value in enumerate(reversed(self.pit_previous_years)))
+                    self.world.global_state["Inflation"] =  (pit[1] + pit_previous_years)
+                    # self.pit_previous_years.append(pit[1])
+                    # self.pit_previous_years.append(pit[2])
+                    # self.pit_previous_years.append(pit[3])
 
                     self.world.global_state["Output Gap"] = xt[1] 
-                    previous_GDP = self.world.global_state["US GDP"] 
-                    Real_GDP_Growth_from_model = current_real_potential_gdp * (1 + self.world.global_state["Output Gap"]) / previous_GDP - 1 
-                    print("Real_GDP_Growth_from_model: ", Real_GDP_Growth_from_model)
-                    self.us_government_spending_economic_multiplier = Real_GDP_Growth_from_model / fiscal_shock if int(fiscal_shock) != 0 else self.us_government_spending_economic_multiplier
-                    print("Reduced GDP per day: ", np.average(1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
-                    print("Reduced GDP: ", (np.prod((1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365])) - 1))
-                    GDP_Growth = 1 - (np.prod((1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365])) - 1) \
-                        + Real_GDP_Growth_from_model
-                    print("GDP Growth: ", GDP_Growth)
-                    print("Fiscal Shock: ", fiscal_shock)
-                    print("Monetary Shock: ", monetary_shock)
-                    print("End This timestep: ", self.world.timestep)
-                    self.world.global_state["US GDP"] = self.world.global_state["US GDP"] * \
-                        GDP_Growth
-                    self.world.GDP_Growth = GDP_Growth
+                    # previous_GDP = self.world.global_state["US GDP"] 
+                    # Real_GDP_Growth_from_model = current_real_potential_gdp * (1 + self.world.global_state["Output Gap"]) / previous_GDP - 1 
+                    # print("Real_GDP_Growth_from_model: ", Real_GDP_Growth_from_model)
+                    # self.us_government_spending_economic_multiplier = Real_GDP_Growth_from_model / fiscal_shock if int(fiscal_shock) != 0 else self.us_government_spending_economic_multiplier
+                    # print("Reduced GDP per day: ", np.average(1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
+                    # print("Reduced GDP: ", (np.prod((1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365])) - 1))
+                    # GDP_Growth = 1 - (np.prod((1 + self.world.global_state["Reduced GDP Multiplier"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365])) - 1) \
+                    #     + Real_GDP_Growth_from_model
+                    # print("GDP Growth: ", GDP_Growth)
+                    # print("Fiscal Shock: ", fiscal_shock)
+                    # print("Monetary Shock: ", monetary_shock)
+                    # print("End This timestep: ", self.world.timestep)
+                    # self.world.global_state["US GDP"] = self.world.global_state["US GDP"] * \
+                    #     GDP_Growth
+                    # self.world.GDP_Growth = GDP_Growth
 
 
                 # A 2019 study by Congressional Budget Office (CBO) economists Edward Gamber and
@@ -1777,15 +1801,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 medicare_medicaid_poverty_reduction_score = medicare_medicaid_poverty_reduction/(self.medicare_medicaid_benefits_avg * (1 + US_Inflation))
                 social_security_poverty_reduction = np.sum(USSocialSecuritySpending[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]) / self.world.global_state["US Government Social Security Beneficiaries"]
                 social_security_poverty_reduction_score = social_security_poverty_reduction/(self.social_security_benefits_avg * (1 + US_Inflation))
-                self.world.planner.state["Defense Imperialism Index"] += us_imperialism_level_score
+                self.world.planner.state["Defense Index"] += us_imperialism_level_score
                 self.world.planner.state["Income Security Index"] += income_security_poverty_reduction_score
                 self.world.planner.state["Social Security Index"] += social_security_poverty_reduction_score
                 self.world.planner.state["Medicare Medicaid Index"] += medicare_medicaid_poverty_reduction_score
             self.world.planner.state["Inflation Index"] += inflation_score
             self.world.planner.state["US Treasury Yield Index"] += us_treasury_yield_long_term_score
-        # other_planner_rewards = (us_imperialism_level_score \
-        #     + income_security_poverty_reduction_score + social_security_poverty_reduction_score \
-        #     + medicare_medicaid_poverty_reduction_score + inflation_score + us_treasury_yield_long_term_score)
 
         # Use a "crra" nonlinearity on the planner economic reward
         marginal_planner_economic_index = crra_nonlinearity(
@@ -1818,8 +1839,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             self.weightage_on_marginal_planner_economic_index,
             marginal_planner_economic_index,
         )
-        # other_planner_rewards = us_imperialism_level_score + income_security_poverty_reduction_score \
-        #     + social_security_poverty_reduction_score + medicare_medicaid_poverty_reduction_score + inflation_score
+        other_planner_rewards = us_imperialism_level_score + income_security_poverty_reduction_score \
+            + social_security_poverty_reduction_score + medicare_medicaid_poverty_reduction_score + inflation_score
         rew[self.world.planner.idx] = (planner_rewards + other_planner_rewards) / (self.reward_normalization_factor) 
         if self.csv_validation and  self.world.timestep == 1 and self.world.use_real_world_policies: 
             print("Real World Data Subsidy: ", np.sum(self.world.real_world_subsidy))
@@ -1851,13 +1872,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             print("US Government Revenue: ", np.sum(self.world.global_state["US Government Revenue"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
             print("US Health Index: ", self.world.planner.state["Health Index"])
             print("Reduced GDP Multiplier: ", self.world.global_state["Reduced GDP Multiplier"][self.world.timestep])  
-            print("Defense Imperialism Spending: ", np.sum(USDefenseSpending[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
+            print("Defense Spending: ", np.sum(USDefenseSpending[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
             print("Income Security Spending: ", np.sum(USIncomeSecurity[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
             print("Social Security Spending: ", np.sum(USSocialSecuritySpending[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
             print("Medicare Medicaid Spending: ", np.sum(USMedicareMedicaidSpending[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]))
             print("Federal Reserve Balance Sheet: ", self.world.global_state["Federal Reserve Balance Sheet"])
             print("Inflation: ", US_Inflation)
-            print("Defense Imperialism Index: ", self.world.planner.state["Defense Imperialism Index"])
+            print("Defense Index: ", self.world.planner.state["Defense Index"])
             print("Income Security Index: ", self.world.planner.state["Income Security Index"])
             print("Social Security Index: ", self.world.planner.state["Social Security Index"])
             print("Medicare Medicaid Index: ", self.world.planner.state["Medicare Medicaid Index"])
@@ -1901,14 +1922,14 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         "US Treasury Yield Long Term (%)": self.world.global_state["US Treasury Yield Long Term"] * 100,
                         "US Government Revenue (USD)": np.sum(self.world.global_state["US Government Revenue"][getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]),
                         "US Health Index": self.world.planner.state["Health Index"],
-                        "Defense Imperialism Spending (USD)": np.sum(USDefenseSpending[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]),
+                        "Defense Spending (USD)": np.sum(USDefenseSpending[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]),
                         "Income Security Spending (USD)": np.sum(USIncomeSecurity[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]),
                         "Social Security Spending (USD)": np.sum(USSocialSecuritySpending[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]),
                         "Medicare Medicaid Spending (USD)": np.sum(USMedicareMedicaidSpending[getFirstIndexForEveryYear:getFirstIndexForEveryYear - 1 + 365]),
                         "Federal Reserve Balance Sheet (USD)": self.world.global_state["Federal Reserve Balance Sheet"],
                         "Inflation": US_Inflation,
                         "US Treasury Yield": self.world.global_state["US Treasury Yield Long Term"],
-                        "Defense Imperialism Index": self.world.planner.state["Defense Imperialism Index"],
+                        "Defense Index": self.world.planner.state["Defense Index"],
                         "Income Security Index": self.world.planner.state["Income Security Index"],
                         "Social Security Index": self.world.planner.state["Social Security Index"],
                         "Medicare Medicaid Index": self.world.planner.state["Medicare Medicaid Index"],
@@ -1953,7 +1974,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     "US Federal Deficit (USD)": (self.world.global_state["US Federal Deficit"]),
                     "US Federal Interest Payment (USD)": np.sum(self.world.global_state["US Federal Interest Payment"][1:]) ,
                     "US Government Revenue (USD)": np.sum(self.world.global_state["US Government Revenue"]),
-                    "Defense Imperialism Spending (USD)": np.sum(USDefenseSpending),
+                    "Defense Spending (USD)": np.sum(USDefenseSpending),
                     "Income Security Spending (USD)": np.sum(USIncomeSecurity),
                     "Social Security Spending (USD)": np.sum(USSocialSecuritySpending),
                     "Medicare Medicaid Spending (USD)": np.sum(USMedicareMedicaidSpending),
@@ -1961,7 +1982,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     "Federal Reserve Fund Rate (%)": self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep],
                     "Inflation": US_Inflation,
                     "US Treasury Yield Long Term (%)": self.world.global_state["US Treasury Yield Long Term"],
-                    "Defense Index": self.world.planner.state["Defense Imperialism Index"],
+                    "Defense Index": self.world.planner.state["Defense Index"],
                     "Income Security Index": self.world.planner.state["Income Security Index"],
                     "Social Security Index": self.world.planner.state["Social Security Index"],
                     "Medicare Medicaid Index": self.world.planner.state["Medicare Medicaid Index"],
@@ -2000,6 +2021,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
         # Create a global state dictionary to save episode data
         self.world.global_state = {}
+        self.dictionary_fiscal_theory = []
         self.set_global_state("Susceptible", susceptible_0, t=self.world.timestep)
         self.set_global_state("Infected", infected_0, t=self.world.timestep)
         self.set_global_state("Recovered", recovered_0, t=self.world.timestep)
@@ -2147,7 +2169,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.world.planner.state["Medicare Medicaid Index"] = np.array([0]).astype(
             self.np_float_dtype
         )
-        self.world.planner.state["Defense Imperialism Index"] = np.array([0]).astype(
+        self.world.planner.state["Defense Index"] = np.array([0]).astype(
             self.np_float_dtype
         )
         self.world.planner.state["Inflation Index"] = np.array([0]).astype(
@@ -2167,42 +2189,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Use floats by default for the SIR dynamics
         if dtype is None:
             dtype = self.np_float_dtype
-        # assert key in [
-        #     "Susceptible",
-        #     "Infected",
-        #     "Recovered",
-        #     "Deaths",
-        #     "Unemployed",
-        #     "Vaccinated",
-        #     "Stringency Level",
-        #     "US Debt",
-        #     "Federal Reserve Balance Sheet",
-        #     "Federal Reserve Fund Rate",
-        #     "Inflation",
-        #     "US Tax Wedge",
-        #     "US Government Revenue", 
-        #     "US Government Mandatory and Discretionary Spending", 
-        #     "US Federal Interest Payment",
-        #     "US Treasury Yield Long Term",
-        #     "US Government Defense Spending",
-        #     "US Government Social Security Spending",
-        #     "US Government Medicare Medicaid Spending",
-        #     "US Government Medicare Medicaid Spending",
-        #     "US Government Non Defense Others Spending",
-        #     "US Government Medicare Medicaid Spending",
-        #     "US Government Non Defense Others Spending",
-        #     "US Federal Deficit",
-        #     "Social Security Poverty Reduction",
-        #     "Medicare Medicaid Poverty Reduction",
-        #     "Income Security Poverty Reduction",
-        #     "Subsidy",
-        #     "Quantitative",
-        #     "Postsubsidy Productivity",
-        #     "US Government Social Security Beneficiaries",
-        #     "US Medicare Medicaid Beneficiaries",
-        #     "US Income Security Beneficiaries",
-        # ]
-        # If no values are passed, set everything to zeros.
         if key not in self.world.global_state:
             if planner:
                 if isArray:
@@ -2391,11 +2377,12 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         """
         Simulates SIR infection model in the US.
         """
-        intercepts = self.beta_intercepts * self._beta_intercepts_modulation
-        slopes = self.beta_slopes * self._beta_slopes_modulation
-        beta_i = (intercepts + slopes * stringency_level_tmk).astype(
-            self.np_float_dtype
-        )
+        
+        # A quick guide to the coronavirus variants - https://www.yalemedicine.org/news/covid-19-variants-of-concern-omicron
+        covid_variant_factor_alpha = 1.4
+        covid_variant_factor_delta = 1.8
+        covid_variant_factor_omnicron = 5.6
+        
         vaccine_effectiveness_pfizer = [0.94, 0.94, 0.87, 0.87, 0.87, 0.96, 0.96, 0.89, 0.89, 0.89, 0.73, 0.57, 0.57, 0.48]
         # January 2021 - vaccine arrived
         # June 2021 - Delta, November 2021 - Omicron
@@ -2413,11 +2400,27 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # 48% among immunocompromised adults after 4th dose, Omicron period
         
         # 11 months - 330 days after March 2020, we have the covid vaccine in January 2021
+        # 7 months - 218 days after March 2020, alpha variant arrived and disappeard in the next 2 months
+        # 12 months - 350 days after March 2020, delta variant arrived in March 2021 and disappeard in December 2021
+        # 21 months - 613 days after March 2020, omnicron variant arrived
         vaccine_effectiveness = 1
         # if self.world.timestep >= 330 and self.world.timestep % 30 == 0:
         #     month = (self.world.timestep - 330 / 30) if (self.world.timestep - 330 / 30) <= len(vaccine_effectiveness_pfizer) - 1 else len(vaccine_effectiveness_pfizer) - 1
         #     vaccine_effectiveness = vaccine_effectiveness_pfizer[month]
             
+        # if self.world.timestep >= 218 and self.world.timestep < 350:
+        #     self._beta_intercepts_modulation = covid_variant_factor_alpha
+        # if self.world.timestep >= 350 and self.world.timestep < 350 + 240:
+        #     self._beta_intercepts_modulation = covid_variant_factor_delta
+        # if self.world.timestep >= 500:
+        #     self._beta_intercepts_modulation = covid_variant_factor_omnicron
+            
+        
+        intercepts = self.beta_intercepts * self._beta_intercepts_modulation
+        slopes = self.beta_slopes * self._beta_slopes_modulation
+        beta_i = (intercepts + slopes * stringency_level_tmk).astype(
+            self.np_float_dtype
+        )
         small_number = 1e-10  # used to prevent indeterminate cases
         susceptible_fraction_vaccinated = np.minimum(
             np.ones((self.num_us_states), dtype=self.np_int_dtype),
