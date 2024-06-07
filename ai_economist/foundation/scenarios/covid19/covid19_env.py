@@ -1349,7 +1349,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         monetary_shock += (self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep] - self.fed_fund_rates) / 1 * (self.interest_hikes_shock_gdp / 100)
                     self.fed_reserve_balance_sheet = self.world.global_state["Federal Reserve Balance Sheet"]
                     self.fed_fund_rates = self.world.global_state["Federal Reserve Fund Rate"][self.world.timestep]
-                    H = 10 # horizon of simulation is the episode length - 10 years
+                    H = 2 # horizon of the function is 2 - previous quarter and current quarter
                     monetary_shock_from_previous_year = 0
                     fiscal_shock_from_previous_year = 0
                     monetary_shock += monetary_shock_from_previous_year
@@ -1381,7 +1381,9 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         if np.abs(monetary_shock) == 0:
                             b_i = 0
                     # b_s = 0.1368
-                    [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s)
+                    [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s, \
+                        inflation = self.world.global_state["Inflation"], yieldBond = self.world.global_state["US Treasury Yield Long Term"], outputGap = self.world.global_state["Output Gap"]
+                    )
                     # print('N\n', N, '\nNb\n', Nb,'\nnb\n', nb, '\nQ\n', Q, '\nze\n', ze, '\nLb\n', Lb) 
                     [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] =\
                     self.f_doir_final(H , Nb, nb, N, Q, ze, Lb, t_ipi , t_ix , t_spi, t_sx, alph ,omeg , b_s , b_i , shock, rho); 
@@ -1396,31 +1398,31 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     print("Federal Reserve Fund Rate: ", it[1])
                     gamma = 0.7
                     
-                    fiscal_shock_third_year_from_year_one = ust[3]
-                    monetary_shock_third_year_from_year_one = ust[3]
-                    if theYearIndex == 1:
-                        previousYearSurplus = self.world.global_state["US Federal Surplus"]
-                        fiscal_shock_from_previous_year += ust[2]
-                        monetary_shock_from_previous_year += uit[2]
-                    if theYearIndex == 2:
-                        previousYearSurplus = self.world.global_state["US Federal Surplus"]
-                        fiscal_shock_from_previous_year += fiscal_shock_third_year_from_year_one
-                        monetary_shock_from_previous_year += monetary_shock_third_year_from_year_one
+                    # fiscal_shock_third_year_from_year_one = ust[3]
+                    # monetary_shock_third_year_from_year_one = ust[3]
+                    # if theYearIndex == 1:
+                    #     previousYearSurplus = self.world.global_state["US Federal Surplus"]
+                    #     fiscal_shock_from_previous_year += ust[2]
+                    #     monetary_shock_from_previous_year += uit[2]
+                    # if theYearIndex == 2:
+                    #     previousYearSurplus = self.world.global_state["US Federal Surplus"]
+                    #     fiscal_shock_from_previous_year += fiscal_shock_third_year_from_year_one
+                    #     monetary_shock_from_previous_year += monetary_shock_third_year_from_year_one
                     # total_yield = sum(value * gamma**(index + 1) for index, value in enumerate(reversed(self.yldt_previous_years)))
                     it_previous_years = 0
                     yldt_previous_years = 0
                     pit_previous_years = 0
                     xt_previous_years = 0
-                    if len(self.dictionary_fiscal_theory) > 1:
-                        for index, element in enumerate(self.dictionary_fiscal_theory):
-                            it_previous_years += element['it'][int(quarterCount - index)] / 4 * gamma ** \
-                                (len(self.dictionary_fiscal_theory) - index)
-                            yldt_previous_years += element['yldt'][int(quarterCount - index)] / 4 * gamma ** \
-                                (len(self.dictionary_fiscal_theory) - index)
-                            pit_previous_years += element['pit'][int(quarterCount - index)] / 4 * gamma ** \
-                                (len(self.dictionary_fiscal_theory) - index)
-                            xt_previous_years += element['xt'][int(quarterCount - index)] / 4 * gamma ** \
-                                (len(self.dictionary_fiscal_theory) - index)
+                    # if len(self.dictionary_fiscal_theory) > 1:
+                    #     for index, element in enumerate(self.dictionary_fiscal_theory):
+                    #         it_previous_years += element['it'][int(quarterCount - index)] / 4 * gamma ** \
+                    #             (len(self.dictionary_fiscal_theory) - index)
+                    #         yldt_previous_years += element['yldt'][int(quarterCount - index)] / 4 * gamma ** \
+                    #             (len(self.dictionary_fiscal_theory) - index)
+                    #         pit_previous_years += element['pit'][int(quarterCount - index)] / 4 * gamma ** \
+                    #             (len(self.dictionary_fiscal_theory) - index)
+                    #         xt_previous_years += element['xt'][int(quarterCount - index)] / 4 * gamma ** \
+                    #             (len(self.dictionary_fiscal_theory) - index)
                     
                     self.world.global_state["US Treasury Yield Long Term"] = (yldt[1] + yldt_previous_years)
                     # self.yldt_previous_years.append(yldt[1])
@@ -2625,12 +2627,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
  
 
     
-    def solveFiscalTheoryModel(self, sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s):
+    def solveFiscalTheoryModel(self, sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s, inflation = 0, yieldBond = 0, outputGap = 0):
         # matrices
         show_results = False  # use for debugging
         A = np.eye(5)  
         # print(A.shape[0])
         N = A.shape[0]
+    
 
         # x pi q ui us
         # [0.988, 0.026, 0, 0, 0]
@@ -2690,6 +2693,28 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
             Eb[indx, nb[indx]] = 1
 
 
+        for indx in range(0, 3):
+            if indx == 0:
+                if indx in nf:
+                    Ef[np.where(nf == (indx))[0], indx] = 1 + outputGap
+                    Efstar[indx, indx] = 1 + outputGap
+                if indx in nb:
+                    Eb[np.where(nb == (indx))[0], indx] = 1 + outputGap
+            
+            if indx == 1:
+                if indx in nf:
+                    Ef[np.where(nf == (indx))[0], indx] = 1 + inflation
+                    Efstar[indx, indx] = 1 + inflation
+                if indx in nb:
+                    Eb[np.where(nb == (indx))[0], indx] = 1 + inflation
+            
+            if indx == 2:
+                if indx in nf:
+                    Ef[np.where(nf == (indx))[0], indx] = 1 + yieldBond
+                    Efstar[indx, indx] = 1 + yieldBond
+                if indx in nb:
+                    Eb[np.where(nb == (indx))[0], indx] = 1 + yieldBond
+            
         
         # ze = np.dot(Eb, np.dot(Q1, np.dot(A1,
         #     C - np.dot(D, np.dot(inverse_linalg_Q1_A1_D,Ef_Q1_A1_C))
