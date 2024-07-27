@@ -21,7 +21,7 @@ def compare_csv(file1, file2, label1, label2, output_folder = 'output_folder'):
     # Create plots for each column
     for column in df1.columns:
         name = column
-        if '%' in column:
+        if '%' in column and 'Fund Rate' not in column:
             df1[column] = df1[column] * 100
             df2[column] = df2[column] * 100
         if 'USD' in column:

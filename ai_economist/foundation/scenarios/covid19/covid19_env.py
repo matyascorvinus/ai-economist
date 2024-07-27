@@ -1424,18 +1424,18 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     #         xt_previous_years += element['xt'][int(quarterCount - index)] / 4 * gamma ** \
                     #             (len(self.dictionary_fiscal_theory) - index)
                     
-                    self.world.global_state["US Treasury Yield Long Term"] = (yldt[1] + yldt_previous_years)
+                    self.world.global_state["US Treasury Yield Long Term"] = (yldt[1] / 4 + yldt_previous_years)
                     # self.yldt_previous_years.append(yldt[1])
                     # self.yldt_previous_years.append(yldt[2])
                     # self.yldt_previous_years.append(yldt[3])
 
                     # total_inflation = sum(value * gamma**(index + 1) for index, value in enumerate(reversed(self.pit_previous_years)))
-                    self.world.global_state["Inflation"] =  (pit[1] + pit_previous_years)
+                    self.world.global_state["Inflation"] =  (pit[1] / 4 + pit_previous_years)
                     # self.pit_previous_years.append(pit[1])
                     # self.pit_previous_years.append(pit[2])
                     # self.pit_previous_years.append(pit[3])
 
-                    self.world.global_state["Output Gap"] = xt[1] 
+                    self.world.global_state["Output Gap"] = xt[1] / 4
                     # previous_GDP = self.world.global_state["US GDP"] 
                     # Real_GDP_Growth_from_model = current_real_potential_gdp * (1 + self.world.global_state["Output Gap"]) / previous_GDP - 1 
                     # print("Real_GDP_Growth_from_model: ", Real_GDP_Growth_from_model)
