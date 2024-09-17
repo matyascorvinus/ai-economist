@@ -92,7 +92,7 @@ env_config_dict = {
     "world_size": [1, 1],
     # Flag to collate all the agents' observations, rewards and done flags into a single matrix
     "collate_agent_step_and_reset_data": False,
-    "csv_file_path": "simulation_results-AI.csv"
+    "csv_file_path": "simulation_results-AI-0.95.csv"
 }
 from rllib.env_wrapper import RLlibEnvWrapper
 env_obj = RLlibEnvWrapper({"env_config_dict": env_config_dict})
@@ -164,27 +164,8 @@ trainer = PPOTrainer(
  
 )
 
-# Number of US states: 51
-# self.us_gdp_2019:  21466585914800.0
-# self.us_federal_deficit:  2465753424.6575336
-# self.us_government_revenue:  9589041095.890411
-# self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
-# NUM_ITERS = 65
-# for iteration in range(NUM_ITERS):
-#     print(f'********** Iter : {iteration} **********')
-#     result = trainer.train()
-#     print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
-#     checkpoint_path = trainer.save()
-#     print("Model checkpoint saved at:", checkpoint_path)
-    
-# checkpoint_path = trainer.save()
-# print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-03-08_12-44-205pv5invc/checkpoint_30/checkpoint-30')
-# env_config['evaluation_num_workers'] = 3
-# env_config['evaluation_interval'] = 1  # <-- HERE: must set this to > 0!
-# trainer._evaluate()
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-09-10_04-54-59nl5_kdp6/checkpoint_20/checkpoint-20')
 
-# trainer.train()
 calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
 
 DATE_FORMAT = "%Y-%m-%d"

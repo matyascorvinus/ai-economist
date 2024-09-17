@@ -164,7 +164,7 @@ trainer = PPOTrainer(
  
 )
 
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-06-07_08-07-08r1mcm4pn/checkpoint_1/checkpoint-1')
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-09-16_15-09-32f3y6a5_x/checkpoint_1/checkpoint-1')
 calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
 
 DATE_FORMAT = "%Y-%m-%d"

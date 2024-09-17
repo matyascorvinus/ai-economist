@@ -1,5 +1,5 @@
 import os
-path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-29"
+path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-09-16"
 env_config_dict = {
     # Scenario name - determines which scenario class to use
     "scenario_name": "CovidAndEconomySimulation",
@@ -161,29 +161,8 @@ trainer = PPOTrainer(
     env=RLlibEnvWrapper,
     config=trainer_config,
  
-)
-
-# Number of US states: 51
-# self.us_gdp_2019:  21466585914800.0
-# self.us_federal_deficit:  2465753424.6575336
-# self.us_government_revenue:  9589041095.890411
-# self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
-# NUM_ITERS = 65
-# for iteration in range(NUM_ITERS):
-#     print(f'********** Iter : {iteration} **********')
-#     result = trainer.train()
-#     print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
-#     checkpoint_path = trainer.save()
-#     print("Model checkpoint saved at:", checkpoint_path)
-    
-# checkpoint_path = trainer.save()
-# print("Model checkpoint saved at:", checkpoint_path)
-trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-28_04-24-55l5kif0cf/checkpoint_40/checkpoint-40')
-# env_config['evaluation_num_workers'] = 3
-# env_config['evaluation_interval'] = 1  # <-- HERE: must set this to > 0!
-# trainer._evaluate()
-
-# trainer.train()
+) 
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-09-16_15-09-32f3y6a5_x/checkpoint_1/checkpoint-1') 
 calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
 
 DATE_FORMAT = "%Y-%m-%d"

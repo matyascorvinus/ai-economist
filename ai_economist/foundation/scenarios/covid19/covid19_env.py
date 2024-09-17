@@ -292,6 +292,10 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.medicare_medicade_spending_2022 = (0.747 + 0.592) * 10**12  
         # When using real-world policy, limit the episode length
         # to the length of the available policy.
+        
+        if self.use_real_world_data is False:
+            self.gdp_per_capita = self.gdp_per_capita - self.defense_spending_2020 / self.us_population - self.medicare_medicade_spending_2020 / self.us_population - self.income_security_spending_2020 / self.us_population
+        
         if self.use_real_world_policies:
             real_world_policy_length = (
                 len(self._real_world_data["policy"]) - self.start_date_index
@@ -455,26 +459,11 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.pop_between_age_18_65 = self.np_float_dtype(pop_between_age_18_65)
         assert 0 <= self.pop_between_age_18_65 <= 1
 
-        # Compute max possible productivity values (used for agent reward normalization)
-        max_productivity_t = self.economy_step(
-            self.us_state_population,
-            np.zeros((self.num_us_states), dtype=self.np_int_dtype),
-            np.zeros((self.num_us_states), dtype=self.np_int_dtype),
-            num_unemployed_at_stringency_level_1,
-            infection_too_sick_to_work_rate=self.infection_too_sick_to_work_rate,
-            population_between_age_18_65=self.pop_between_age_18_65,
-        )
-
-        self.maximum_productivity_t = max_productivity_t
-        self.us_government_revenue = us_federal_revenue
-        self.us_gdp_2019 = self.us_population * self.gdp_per_capita
-        print("self.us_gdp_2019: ", self.us_gdp_2019)
-        # 2019 US government spending was $4.4 trillion,
         # according to the Congressional Budget Office. https://www.cbo.gov/publication/56324
+        self.us_government_revenue = us_federal_revenue
         self.us_government_mandatory_and_discretionary_spending = \
             us_government_mandatory_and_discretionary_spending
         self.trillion = 10**12
-        self.us_tax_wedge = self.np_float_dtype(self.us_government_revenue * 365 / self.us_gdp_2019) 
         self.us_government_defense_spending = us_government_defense_spending
         self.us_government_social_security_spending = us_government_social_security_spending
         self.us_government_medicare_medicaid_spending = us_government_medicare_medicaid_spending
@@ -491,6 +480,22 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         self.medicare_medicaid_beneficiaries_growth = medicare_medicaid_beneficiaries_growth
         self.social_security_benefits_avg = social_security_benefits_avg
         self.dictionary_fiscal_theory = []
+
+        # Compute max possible productivity values (used for agent reward normalization)
+        max_productivity_t = self.economy_step(
+            self.us_state_population,
+            np.zeros((self.num_us_states), dtype=self.np_int_dtype),
+            np.zeros((self.num_us_states), dtype=self.np_int_dtype),
+            num_unemployed_at_stringency_level_1,
+            infection_too_sick_to_work_rate=self.infection_too_sick_to_work_rate,
+            population_between_age_18_65=self.pop_between_age_18_65,
+        )
+
+        self.maximum_productivity_t = max_productivity_t
+        self.us_gdp_2019 = self.us_population * self.gdp_per_capita
+        print("self.us_gdp_2019: ", self.us_gdp_2019)
+        self.us_tax_wedge = self.np_float_dtype(self.us_government_revenue * 365 / self.us_gdp_2019) 
+        # 2019 US government spending was $4.4 trillion,
         
         # Economic reward non-linearity
         self.economic_reward_crra_eta = self.np_float_dtype(economic_reward_crra_eta)
@@ -1203,8 +1208,8 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                     = self.world.global_state["US Government Income Security"][self.world.timestep]  
                     
                 daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
-                postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]) + \
-                                            daily_statewise_subsidy_t * \
+                postsubsidy_productivity_t = productivity_t \
+                                             + daily_statewise_subsidy_t * \
                                                 self.us_government_spending_economic_multiplier
                 self.world.global_state["Postsubsidy Productivity"][
                     curr_t
@@ -1232,12 +1237,16 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                 # ---------
                 # Add federal government subsidy to productivity
                 daily_statewise_subsidy_t = self.world.global_state["Subsidy"][curr_t]
-                postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]) + \
+                # postsubsidy_productivity_t = productivity_t * (1 - self.world.global_state["Reduced GDP Multiplier"][self.world.timestep]) + \
+                
+                postsubsidy_productivity_t = productivity_t + \
                                             daily_statewise_subsidy_t * \
                                                 self.us_government_spending_economic_multiplier
                 self.world.global_state["Postsubsidy Productivity"][
                     curr_t
                 ] = postsubsidy_productivity_t 
+                print("Day ", self.world.timestep)
+                print("Postsubsidy Productivity ", np.sum(self.world.global_state["Postsubsidy Productivity"][:self.world.timestep], axis=(0, 1)))
                 federal_interest_payment = self.world.global_state["US Debt"] * self.world.global_state["US Treasury Yield Long Term"] / 365
                 if len(self.world.planner.state["Federal Reserve Balance Sheet"]) > 1 and self.world.planner.state["Federal Reserve Balance Sheet"][-1] != 0:
                     quantitative_amount = self.world.planner.state["Federal Reserve Balance Sheet"][-1]
@@ -1331,22 +1340,13 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
                         b_i = np.mean(b_i)
                         if np.abs(monetary_shock) == 0:
                             b_i = 0
-                    # b_s = 0.1368
                     [N, Nb , nb, Q, ze, Lb] = self.solveFiscalTheoryModel(sig, kap, bet, omeg, rho, t_ix, t_ipi, rhoi, rhos, b_i, b_s, \
                         inflation = self.world.global_state["Inflation"], yieldBond = self.world.global_state["US Treasury Yield Long Term"], outputGap = self.world.global_state["Output Gap"]
                     )
-                    # print('N\n', N, '\nNb\n', Nb,'\nnb\n', nb, '\nQ\n', Q, '\nze\n', ze, '\nLb\n', Lb) 
+                    
                     [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] =\
                     self.f_doir_final(H , Nb, nb, N, Q, ze, Lb, t_ipi , t_ix , t_spi, t_sx, alph ,omeg , b_s , b_i , shock, rho); 
-                    # Create a dictionary, storing these key value pairs
-                    dictionary = {'zt': zt, 'yt': yt, 'xt': xt, 'pit': pit, 'vt': vt, 
-                                'qt': qt, 'uit': uit, 'ust': ust, 'it': it, 'st': st, 'qlevelt': qlevelt, 
-                                'yldt': yldt, 'rnt': rnt, 'sumomeg': sumomeg, 
-                                'sumratio': sumratio}
-                    self.dictionary_fiscal_theory.append(dictionary)
-                    print("Inflation shock: ", pit[1])
-                    print("Yield: ", yldt[1])
-                    print("Federal Reserve Fund Rate: ", it[1])
+                    
                     
                     [zt, yt, xt, pit, vt, qt, uit, ust, it, st, qlevelt, yldt, rnt,sumomeg,sumratio] = \
                         self.f_doir_final(H , Nb, nb, N, Q, ze, Lb, t_ipi , t_ix , t_spi, t_sx, alph ,omeg , b_s , b_i , shock, rho)
@@ -1624,7 +1624,7 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # Economic index -- fraction of annual GDP achieved
         # Use a "crra" nonlinearity on the agent economic reward
         marginal_agent_economic_index = crra_nonlinearity(
-            postsubsidy_productivity_t * (1 - US_Inflation) / self.agents_economic_norm,
+            postsubsidy_productivity_t / self.agents_economic_norm,
             self.economic_reward_crra_eta,
         ).astype(self.np_float_dtype)
 
@@ -2204,15 +2204,17 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
 
 
         num_people_that_can_work = np.maximum(0, num_workers - cant_work)
-        if(self.world.timestep > 0 and self.world.global_state["US GDP"] is not None):
-            self.gdp_per_capita = self.world.global_state["US GDP"] / self.us_population 
+        government_spending_per_capita = 0
+        if self.use_real_world_data is False and self.world.timestep > 1:
+            government_spending = (self.world.global_state["US Government Defense Spending"][self.world.timestep] + self.world.global_state["US Government Social Security Spending"][self.world.timestep] + self.world.global_state["US Government Income Security"][self.world.timestep]) * self.us_government_spending_economic_multiplier
+            government_spending_per_capita = government_spending / self.us_population / self.workers_per_capita
+        
         self.gdp_per_worker = (self.gdp_per_capita / self.workers_per_capita).astype(
             self.np_float_dtype
         )   
         self.daily_production_per_worker = (
             self.gdp_per_worker / self.num_days_in_an_year
-        ).astype(self.np_float_dtype)
-        
+        ).astype(self.np_float_dtype) + government_spending_per_capita
         productivity = (
             num_people_that_can_work * self.daily_production_per_worker
         ).astype(self.np_float_dtype)
@@ -2250,16 +2252,6 @@ class CovidAndEconomyEnvironment(BaseEnvironment):
         # 12 months - 350 days after March 2020, delta variant arrived in March 2021 and disappeard in December 2021
         # 21 months - 613 days after March 2020, omnicron variant arrived
         vaccine_effectiveness = 1
-        # if self.world.timestep >= 330 and self.world.timestep % 30 == 0:
-        #     month = (self.world.timestep - 330 / 30) if (self.world.timestep - 330 / 30) <= len(vaccine_effectiveness_pfizer) - 1 else len(vaccine_effectiveness_pfizer) - 1
-        #     vaccine_effectiveness = vaccine_effectiveness_pfizer[month]
-            
-        # if self.world.timestep >= 218 and self.world.timestep < 350:
-        #     self._beta_intercepts_modulation = covid_variant_factor_alpha
-        # if self.world.timestep >= 350 and self.world.timestep < 350 + 240:
-        #     self._beta_intercepts_modulation = covid_variant_factor_delta
-        # if self.world.timestep >= 500:
-        #     self._beta_intercepts_modulation = covid_variant_factor_omnicron
             
         
         intercepts = self.beta_intercepts * self._beta_intercepts_modulation

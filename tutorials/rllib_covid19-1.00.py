@@ -168,7 +168,7 @@ trainer = PPOTrainer(
 # self.us_federal_deficit:  2465753424.6575336
 # self.us_government_revenue:  9589041095.890411
 # self.us_government_mandatory_and_discretionary_spending:  12054794520.547945
-NUM_ITERS = 20
+NUM_ITERS = 2
 checkpoint_path = ''
 checkpoint_list = []
 for iteration in range(NUM_ITERS):
@@ -288,11 +288,11 @@ env_config_dict = {
     "csv_file_path": name_file
 } 
 trainer.restore(checkpoint_path)
-calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
+calibrated_env = RLlibEnvWrapper({"env_config_dict": env_config_dict})
 
 DATE_FORMAT = "%Y-%m-%d"
 obs = calibrated_env.reset();
-print(calibrated_env.us_state_idx_to_state_name.items())
+# print(calibrated_env.us_state_idx_to_state_name.items())
 for _ in range(calibrated_env.episode_length):
     # Set initial states
     agent_states = {}
