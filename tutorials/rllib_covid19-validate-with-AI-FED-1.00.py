@@ -1,0 +1,211 @@
+import os
+path_to_data_and_fitted_params = "../../../datasets/covid19_datasets/2024-02-27"
+env_config_dict = {
+    # Scenario name - determines which scenario class to use
+    "scenario_name": "CovidAndEconomySimulation",
+
+    # The list of components in this simulation
+    "components": [
+        {"ControlUSStateOpenCloseStatus": {
+            # action cooldown period in days.
+            # Once a stringency level is set, the state(s) cannot switch to another level
+            # for a certain number of days (referred to as the "action_cooldown_period")
+            "action_cooldown_period": 28
+        }},
+        {"FederalGovernmentSubsidyAndQuantitativePolicies": {
+            # The number of subsidy levels.
+            "num_subsidy_quantitative_policy_level": 15,
+            # The number of days over which the total subsidy amount is evenly rolled out.
+            "subsidy_quantitative_policy_interval": 1,
+            # The maximum annual subsidy that may be allocated per person.
+            "max_annual_monetary_unit_per_person": 20000,
+        }},
+        {"VaccinationCampaign": {
+            # The number of vaccines available per million people everyday.
+            "daily_vaccines_per_million_people": 3000,
+            # The number of days between vaccine deliveries.
+            "delivery_interval": 1,
+            # The date (YYYY-MM-DD) when vaccination begins
+            "vaccine_delivery_start_date": "2021-01-12",
+        }},
+    ],
+
+    # Date (YYYY-MM-DD) to start the simulation.
+    "start_date": "2020-03-22",
+    # How long to run the simulation for (in days)
+    "episode_length": 960, # 1014 days From 2020-03-22 to 2022-12-31
+
+    # use_real_world_data (bool): Replay what happened in the real world.
+    # Real-world data comprises SIR (susceptible/infected/recovered),
+    # unemployment, government policy, and vaccination numbers.
+    # This setting also sets use_real_world_policies=True.
+    "use_real_world_data": False,
+    # use_real_world_policies (bool): Run the environment with real-world policies
+    # (stringency levels and subsidies). With this setting and
+    # use_real_world_data=False, SIR and economy dynamics are still
+    # driven by fitted models.
+    "use_real_world_policies": False,
+    "csv_validation": True,
+
+    # Let the real-world state government handle the covid-19 restriction, and the federal government still operated by AI
+    "state_governments_policies_only": True,
+    "us_government_spending_economic_multiplier": 1.00,
+
+    # A factor indicating how much more the
+    # states prioritize health (roughly speaking, loss of lives due to
+    # opening up more) over the economy (roughly speaking, a loss in GDP
+    # due to shutting down resulting in more unemployment) compared to the
+    # real-world.
+    # For example, a value of 1 corresponds to the health weight that
+    # maximizes social welfare under the real-world policy, while
+    # a value of 2 means that states care twice as much about public health
+    # (preventing deaths), while a value of 0.5 means that states care twice
+    # as much about the economy (preventing GDP drops).
+    "health_priority_scaling_agents": 1,
+    # Same as above for the planner
+    "health_priority_scaling_planner": 1,
+
+    # Full path to the directory containing
+    # the data, fitted parameters and model constants. This defaults to
+    # "ai_economist/datasets/covid19_datasets/data_and_fitted_params".
+    # For details on obtaining these parameters, please see the notebook
+    # "ai-economist-foundation/ai_economist/datasets/covid19_datasets/
+    # gather_real_world_data_and_fit_parameters.ipynb".
+    "path_to_data_and_fitted_params": path_to_data_and_fitted_params,
+
+    # Economy-related parameters
+    # Fraction of people infected with COVID-19. Infected people don't work.
+    "infection_too_sick_to_work_rate": 0.1,
+    # Fraction of the population between ages 18-65.
+    # This is the subset of the population whose employment/unemployment affects
+    # economic productivity.
+    "pop_between_age_18_65": 0.6,
+    # Percentage of interest paid by the federal
+    # government to borrow money from the federal reserve for COVID-19 relief
+    # (direct payments). Higher interest rates mean that direct payments
+    # have a larger cost on the federal government's economic index.
+    "risk_free_interest_rate": 0.03,
+    # CRRA eta parameter for modeling the economic reward non-linearity.
+    "economic_reward_crra_eta": 2,
+
+    # Number of agents in the simulation (50 US states + Washington DC)
+    "n_agents": 51,
+    # World size: Not relevant to this simulation, but needs to be set for Foundation
+    "world_size": [1, 1],
+    # Flag to collate all the agents' observations, rewards and done flags into a single matrix
+    "collate_agent_step_and_reset_data": False,
+    "csv_file_path": "simulation-with-real-state-gov-and-ai-federal-1.00.csv"
+}
+from rllib.env_wrapper import RLlibEnvWrapper
+env_obj = RLlibEnvWrapper({"env_config_dict": env_config_dict})
+import ray
+from ray.rllib.agents.ppo import PPOTrainer
+from ray import tune
+
+import ai_economist
+policies = {
+    "a": (
+        None,  # uses default policy
+        env_obj.observation_space,
+        env_obj.action_space,
+        {}  # define a custom agent policy configuration.
+    ),
+    "p": (
+        None,  # uses default policy
+        env_obj.observation_space_pl,
+        env_obj.action_space_pl,
+        {}  # define a custom planner policy configuration.
+    )
+}
+
+# In foundation, all the agents have integer ids and the social planner has an id of "p"
+policy_mapping_fun = lambda i: "a" if str(i).isdigit() else "p"
+
+policies_to_train = ["a", "p"]
+
+trainer_config = {
+    "multiagent": {
+        "policies": policies,
+        "policies_to_train": policies_to_train,
+        "policy_mapping_fn": policy_mapping_fun,
+    },
+    "num_gpus": 1, 
+    #"num_gpus_per_worker": 1
+    # "log_level": "DEBUG",  # Set the log level
+}
+
+trainer_config.update(
+    {
+        "num_workers": 1,
+        "num_envs_per_worker": 1,
+        # Other training parameters
+        # "train_batch_size":  10,
+        # "sgd_minibatch_size": 5,
+        # "num_sgd_iter": 1
+    }
+)
+
+# We also add the "num_envs_per_worker" parameter for the env. wrapper to index the environments.
+env_config = {
+    "env_config_dict": env_config_dict,
+    "num_envs_per_worker": trainer_config.get('num_envs_per_worker'),
+}
+
+trainer_config.update(
+    {
+        "env_config": env_config
+    }
+)
+
+# Initialize Ray
+ray.init(webui_host="127.0.0.1")
+# Create the PPO trainer.
+trainer = PPOTrainer(
+    env=RLlibEnvWrapper,
+    config=trainer_config,
+ 
+)
+
+# Number of US states: 51
+# NUM_ITERS = 65
+# for iteration in range(NUM_ITERS):
+#     print(f'********** Iter : {iteration} **********')
+#     result = trainer.train()
+#     print(f'''episode_reward_mean: {result.get('episode_reward_mean')}''')
+#     checkpoint_path = trainer.save()
+#     print("Model checkpoint saved at:", checkpoint_path)
+    
+# checkpoint_path = trainer.save()
+# print("Model checkpoint saved at:", checkpoint_path)
+# trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-02-29_03-32-32vkhk1i9l/checkpoint_30/checkpoint-30')
+trainer.restore('/home/ubuntu/ray_results/PPO_RLlibEnvWrapper_2024-03-13_07-35-15x4r4xouo/checkpoint_38/checkpoint-38')
+calibrated_env = ai_economist.foundation.make_env_instance(**env_config_dict)
+
+DATE_FORMAT = "%Y-%m-%d"
+obs = calibrated_env.reset();
+print(calibrated_env.us_state_idx_to_state_name.items())
+for _ in range(calibrated_env.episode_length):
+    # Set initial states
+    agent_states = {}
+    for agent_idx in range(env_obj.env.n_agents):
+        agent_states[str(agent_idx)] = trainer.get_policy("a").get_initial_state()
+    planner_states = trainer.get_policy("p").get_initial_state()   
+
+    actions = {}
+    for agent_idx in range(env_obj.env.n_agents):
+        # Use the trainer object directly to sample actions for each agent
+        actions[str(agent_idx)] = trainer.compute_action(
+            obs[str(agent_idx)], 
+            agent_states[str(agent_idx)], 
+            policy_id="a",
+            full_fetch=False
+        )
+
+    # Action sampling for the planner
+    actions["p"] = trainer.compute_action(
+        obs['p'], 
+        planner_states, 
+        policy_id='p',
+        full_fetch=False
+    )
+    obs, rew, done, info = env_obj.step(actions)        

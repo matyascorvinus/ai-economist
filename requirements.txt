@@ -98,3 +98,8 @@ wcwidth==0.2.5
 webencodings==0.5.1
 widgetsnbextension==3.5.1
 wrapt==1.12.1
+
+setuptools~=67.4.0
+gym~=0.25.2
+ray~=0.8.4
+torch~=1.10.2 

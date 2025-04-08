@@ -140,9 +140,86 @@ cython_debug/
 .idea/
 
 .DS_Store
-requirements.txt
 ai_economist/foundation/activation_code.txt
 
-ai_economist/requirements.txt
 
 .DS_Store
+tutorials/nohup.out
+.vscode/
+ai_economist/datasets/covid19_datasets/custom-data_CBO-armed-forces-tool_2023-10-15.json
+ai_economist/datasets/covid19_datasets/data_and_fitted_params/US-Final-human-development-index-learner-OurWorldInData.csv
+ai_economist/datasets/covid19_datasets/data_and_fitted_params-backup/US-Final-human-development-index-learner-OurWorldInData.csv
+tutorials/rllib_covid19-0.95.py
+tutorials/rllib_covid19-1.10.py
+tutorials/rllib_covid19-2.05.py
+tutorials/rllib_covid19-validate-AI-0.95.py
+tutorials/rllib_covid19-validate-AI-2.05.py
+tutorials/rllib_covid19-validate-real-data.py
+tutorials/rllib_covid19-validate-with-AI-FED-0.95.py
+tutorials/rllib_covid19-validate-with-AI-FED-1.30.py
+tutorials/rllib_covid19-validate-with-AI-FED-2.05.py
+tutorials/rllib_covid19-validate-with-AI-FED.py
+tutorials/rllib_covid19-with-real-state-gov-and-AI-Federal-0.95.py
+tutorials/rllib_covid19-with-real-state-gov-and-AI-Federal-1.30.py
+tutorials/rllib_covid19-with-real-state-gov-and-AI-Federal-2.05.py
+tutorials/rllib_covid19-with-real-state-gov-and-AI-Federal.py
+tutorials/simulation_results-AI_day.csv
+tutorials/simulation_results-AI-0.95_day.csv
+tutorials/simulation_results-AI-0.95.csv
+tutorials/simulation_results-AI-1.00_day.csv
+tutorials/simulation_results-AI-1.00.csv
+tutorials/simulation_results-AI.csv
+tutorials/simulation_results-real_data_day.csv
+tutorials/simulation_results-real_data.csv
+tutorials/simulation_results-satisfactory.csv
+tutorials/simulation_results-simulation.csv
+tutorials/simulation_results.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal_day - 0.85 multiplier.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal_day - 1.30 multiplier.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal_day - 2.05 multiplier.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal_day.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal-0.95_day.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal-0.95.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal-1.00_day.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal-1.00.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal-1.30_day.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal-1.30.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal-2.05_day.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal-2.05.csv
+tutorials/simulation-with-real-state-gov-and-ai-federal.csv
+tutorials/output_folder/Current Subsidy Quantitative Policy Level_comparison.png
+tutorials/output_folder/Day_comparison.png
+tutorials/output_folder/Deaths (thousands)_comparison.png
+tutorials/output_folder/Defense Imperialism Spending (USD)_comparison.png
+tutorials/output_folder/Defense Index_comparison.png
+tutorials/output_folder/Defense Spending (USD)_comparison.png
+tutorials/output_folder/Economic Index_comparison.png
+tutorials/output_folder/Federal Reserve Balance Sheet (USD)_comparison.png
+tutorials/output_folder/Federal Reserve Fund Rate (%)_comparison.png
+tutorials/output_folder/Health Index_comparison.png
+tutorials/output_folder/Income Security Index_comparison.png
+tutorials/output_folder/Income Security Spending (USD)_comparison.png
+tutorials/output_folder/Infected_comparison.png
+tutorials/output_folder/Inflation Index_comparison.png
+tutorials/output_folder/Inflation_comparison.png
+tutorials/output_folder/Mean Stringency Level_comparison.png
+tutorials/output_folder/Mean Unemployment Rate (%)_comparison.png
+tutorials/output_folder/Medicare Medicaid Index_comparison.png
+tutorials/output_folder/Medicare Medicaid Spending (USD)_comparison.png
+tutorials/output_folder/Post-productivity (trillion $)_comparison.png
+tutorials/output_folder/Recovered_comparison.png
+tutorials/output_folder/Reward Social Welfare_comparison.png
+tutorials/output_folder/Reward_comparison.png
+tutorials/output_folder/Social Security Index_comparison.png
+tutorials/output_folder/Social Security Spending (USD)_comparison.png
+tutorials/output_folder/Susceptibles_comparison.png
+tutorials/output_folder/Total Subsidies (USD)_comparison.png
+tutorials/output_folder/US Debt (USD)_comparison.png
+tutorials/output_folder/US Federal Deficit (USD)_comparison.png
+tutorials/output_folder/US Federal Interest Payment (USD)_comparison.png
+tutorials/output_folder/US GDP (USD)_comparison.png
+tutorials/output_folder/US Government Revenue (USD)_comparison.png
+tutorials/output_folder/US Tax Wedge ('%' of GDP)_comparison.png
+tutorials/output_folder/US Treasury Yield Index_comparison.png
+tutorials/output_folder/US Treasury Yield Long Term (%)_comparison.png
+tutorials/output_folder/Vaccinated (% of population)_comparison.png

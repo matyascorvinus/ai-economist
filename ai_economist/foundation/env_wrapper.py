@@ -11,7 +11,6 @@ The env wrapper class
 import logging
 
 import GPUtil
-import torch
 
 try:
     num_gpus_available = len(GPUtil.getAvailable())
@@ -104,7 +103,6 @@ class FoundationEnvWrapper:
         env_registrar=None,
         event_messenger=None,
         process_id=0,
-        blocks_per_env=1
     ):
         """
         'env_obj': an environment object
@@ -134,7 +132,6 @@ class FoundationEnvWrapper:
 
         self.n_agents = self.env.num_agents
         self.episode_length = self.env.episode_length
-        self.blocks_per_env = blocks_per_env
 
         assert self.env.name
         self.name = self.env.name
@@ -169,17 +166,6 @@ class FoundationEnvWrapper:
             self.env.action_space["p"] = Discrete(self.env.get_agent("p").action_spaces)
         self.env.action_space["p"].dtype = np.int32
 
-        if self.env.world.federal_reserve.multi_action_mode:
-            self.env.action_space["f"] = MultiDiscrete(
-                self.env.get_agent("f").action_spaces
-            )
-
-        else:
-            self.env.action_space["f"] = Discrete(
-                self.env.get_agent("f").action_spaces
-            )
-        self.env.action_space["f"].dtype = np.int32 
-            
         # Ensure the observation and action spaces share the same keys
         assert set(self.env.observation_space.keys()) == set(
             self.env.action_space.keys()
@@ -222,7 +208,6 @@ class FoundationEnvWrapper:
                 num_agents=self.n_agents,
                 episode_length=self.episode_length,
                 num_envs=self.n_envs,
-                blocks_per_env=self.blocks_per_env
             )
 
             logging.info("Initializing the CUDA function manager...")
@@ -380,7 +365,8 @@ class FoundationEnvWrapper:
             self.env.scenario_step()
 
             # Compute rewards
-            self.env.generate_rewards() 
+            self.env.generate_rewards()
+
             result = None  # Do not return anything
         else:
             assert actions is not None, "Please provide actions to step with."
