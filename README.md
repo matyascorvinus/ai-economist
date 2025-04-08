@@ -1,4 +1,11 @@
-# Foundation: An Economic Simulation Framework
+# Covid-19 AI-Economist Simulation - Enhanced by Fiscal Theory of the Price Level
+
+This repo contains an implementation of the AI-Economist simulation, enhanced by the Fiscal Theory of the Price Level. Please refer to the paper
+[Fusing Multi-agent Reinforcement Learning and Fiscal Theory for Crisis Management](AI_Economist___US_New_Paper.pdf)
+for more details.
+
+
+# Original AI-Economist README - Foundation: An Economic Simulation Framework
 
 This repo contains an implementation of Foundation, a framework for flexible, modular, and composable environments that **model socio-economic behaviors and dynamics in a society with both agents and governments**.
 
