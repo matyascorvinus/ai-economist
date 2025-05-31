@@ -12,7 +12,9 @@ Then, install the requirements:
 sudo apt-get install build-essential
 conda create -n ai-economist python=3.7.16
 conda activate ai-economist
-pip install ai-economist
+cd ai-economist
+pip install -e .
+pip install scikit-learn
 pip install gym==0.26.2
 pip install ray==0.8.4
 pip install torch==1.10.2 

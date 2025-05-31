@@ -103,3 +103,4 @@ gym==0.26.2
 ray==0.8.4
 torch==1.10.2 
 rl_warp_drive==2.7.1
+tensorflow==2.11.0
