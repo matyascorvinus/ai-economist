@@ -4,6 +4,36 @@ This repo contains an implementation of the AI-Economist simulation, enhanced by
 [Fusing Multi-agent Reinforcement Learning and Fiscal Theory for Crisis Management](AI_Economist___US_New_Paper.pdf)
 for more details.
 
+## Installation
+Please install miniconda from https://docs.conda.io/en/latest/miniconda.html
+
+Then, install the requirements:
+```bash
+sudo apt-get install build-essential
+conda create -n ai-economist python=3.7.16
+conda activate ai-economist
+pip install ai-economist
+pip install gym==0.26.2
+pip install ray==0.8.4
+pip install torch==1.10.2 
+conda install -c conda-forge pycuda
+pip install protobuf==3.20.3
+pip install rl-warp-drive --no-dependencies
+pip install ray[rllib]
+```
+Then, run all the commands in the following Jupyter notebooks to install the dataset package (select the "ai-economist" conda environment for the kernel):
+```bash
+jupyter notebook gather_real_world_data.ipynb
+jupyter notebook fit_model_parameters.ipynb
+```
+
+
+Finally, go to the tutorials folder and run the following Jupyter notebook:
+```bash
+conda activate ai-economist
+cd ai_economist/tutorials
+python prllib_covid19-1.00.py
+```
 
 # Original AI-Economist README - Foundation: An Economic Simulation Framework
 
